@@ -8,7 +8,8 @@
 #include <regex>
 #include <memory>
 #include <algorithm>
-#include <tic_toc.h>
+#include <fstream>
+#include <utility.hpp>
 
 
 using namespace std;
@@ -21,16 +22,8 @@ using PtrTriangle = shared_ptr<Triangle>;
 using PtrEdge = shared_ptr<Edge>;
 using PtrActiveEdge = shared_ptr<ActiveEdge>;
 
-const int WIDTH = 640;
-const int HEIGHT = 480;
-
-bool starts_with(char *str, const char *pattern){
-    int i = 0;
-    while(str[i] == pattern[i] && str[i] != '\0'){
-        i++;
-    }
-    return (pattern[i] == '\0');
-}
+const int WIDTH = 480;
+const int HEIGHT = 640;
 
 
 struct Vertice{
@@ -48,9 +41,9 @@ struct Edge{
     PtrVertice v1, v2;
     Edge(PtrVertice v1, PtrVertice v2, int id):v1(v1), v2(v2), x(v1->point[0]), id(id){
         if(v1->point[1] == v2->point[1]){
-            dx = 0;
+            dx = 10;
         }else{
-            dx = (v1->point[0] - v2->point[0]) / (v1->point[1] - v2->point[1]);
+            dx = -(v1->point[0] - v2->point[0]) / (v1->point[1] - v2->point[1]);
         }
         dy = (int)v1->point[1] - (int)v2->point[1];
     }
@@ -81,6 +74,7 @@ struct Triangle{
         //TODO: What if the edge is parallel to x axis?
         Eigen::Vector3d e1 = v[0]->point - v[1]->point, e2 = v[1]->point - v[2]->point;
         Eigen::Vector3d normal = e1.cross(e2).normalized();
+        // cout << "DEBUG " << e1 << "and " << e2 << endl;
         tie(a, b, c, d) = make_tuple(normal[0], normal[1], normal[2], -normal.adjoint() * v[0]->point);
 
         edge1 = make_shared<Edge>(v[0], v[2], id);
@@ -89,9 +83,9 @@ struct Triangle{
         //divide the point to edge3
         edge2->dy--;
 
-        int color_ = 255 * normal[2];
+        int color_ = abs(255 * normal[2]);
         color = cv::Vec3b(color_, color_, color_);
-        return make_tuple(v[0]->point[1], v[0]->point[1], v[1]->point[1], edge1, edge2, edge3);
+        return make_tuple(v[0]->point[1], v[1]->point[1], v[2]->point[1], edge1, edge2, edge3);
     }
     Triangle(PtrVertice v1, PtrVertice v2, PtrVertice v3):v{v1, v2, v3}, id(count++){
     }
@@ -129,7 +123,7 @@ void transform_vertices(vector<PtrVertice> & vertices){
 
     double original_center_x = (max_x + min_x) / 2, original_center_y = (max_y + min_y) / 2;
     double original_scale_x = (max_x - min_x), original_scale_y = (max_y - min_y);
-    double scale_x = WIDTH / 3.0 / original_scale_x, scale_y = HEIGHT / 3.0 / original_scale_y, scale_z = 0;
+    double scale_x = WIDTH / 3.0 / original_scale_x, scale_y = HEIGHT / 3.0 / original_scale_y, scale_z = 1;
 
     Eigen::Matrix3d R = Eigen::Matrix3d::Identity();
     Eigen::Vector3d s(scale_x, scale_y, scale_z);
@@ -138,60 +132,16 @@ void transform_vertices(vector<PtrVertice> & vertices){
     Eigen::Vector3d bias(WIDTH/2, HEIGHT/2, -100);
 
     for_each(vertices.begin(), vertices.end(), [R, S, center, bias](PtrVertice & vertice){vertice->point = R * (S * (vertice->point - center) + bias); });
-    cout << "min_x , max_x" <<  "min_y, max_y" << min_x << " " << max_x << " " << min_y << " " << max_y << endl;
+    // cout << "min_x , max_x" <<  "min_y, max_y" << min_x << " " << max_x << " " << min_y << " " << max_y << endl;
 }
 
-
-
-int main(){
-    char object_file_path[1000] = "/home/taokun/Work/Homework/scanline/model/teapot.obj";
-    FILE *object_file = fopen(object_file_path, "r");
-    char buffer[1000];
-    char buffer1[100], buffer2[100], buffer3[100];
-    vector<PtrVertice> vertices;
-    vector<PtrTriangle> triangles;
-
-    TicToc t_parse;
-    while(fscanf(object_file, "%[^\n]\n", buffer) != -1){
-        if(starts_with(buffer, "vn")){
-            continue;
-        }
-        else if(starts_with(buffer, "v")){
-            double x, y, z;
-            sscanf(buffer, "v %lf %lf %lf", &x, &y, &z);
-            PtrVertice ptr_vertice = make_shared<Vertice>(x, y, z);
-            vertices.push_back(ptr_vertice);
-        }
-        else if(starts_with(buffer, "f")){
-            int v1, v2, v3;
-            sscanf(buffer, "f %s %s %s", buffer1, buffer2, buffer3);
-            sscanf(buffer1, "%d ", &v1);
-            sscanf(buffer2, "%d ", &v2);
-            sscanf(buffer3, "%d ", &v3);
-            PtrTriangle ptr_triangle = make_shared<Triangle>(vertices[v1 - 1], vertices[v2 - 1], vertices[v3 - 1]);
-            triangles.push_back(ptr_triangle);
-        }
-    }
-    cout << "Parse object file takes " << t_parse.toc() << "ms" << endl;
-    //rotate and scale all the vertices 
-    TicToc t_transform;
-    transform_vertices(vertices);
-    cout << "It takes " << t_transform.toc() << "ms" << endl;
-
-  
-    auto [min_x_element, max_x_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[0] < v2->point[0];});
-    auto [min_y_element, max_y_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[1] < v2->point[1];});
-    auto [min_x, max_x] = make_tuple((*min_x_element)->point[0], (*max_x_element)->point[0]);
-    auto [min_y, max_y] = make_tuple((*min_y_element)->point[1], (*max_y_element)->point[1]);
-    cout << "min_x , max_x " <<  "min_y, max_y " << min_x << " " << max_x << " " << min_y << " " << max_y << endl;
-
-
+void render_models(vector<PtrVertice> & vertices, vector<PtrTriangle> triangles){
     vector<vector<PtrTriangle>> polygons_table(HEIGHT + 1);
     // vector<vector<PtrEdge>> edges_table(HEIGHT + 1);
     list<PtrActiveEdge> active_edges_table;
     list<PtrTriangle> active_polygons_table;
-    double z_buffer[HEIGHT][WIDTH];
-    cv::Mat color_buffer(HEIGHT, WIDTH, CV_8UC3);
+    Eigen::MatrixXd z_buffer = Eigen::MatrixXd::Ones(HEIGHT + 1, WIDTH) * 1e5;
+    cv::Mat color_buffer(HEIGHT + 1, WIDTH, CV_8UC3);
 
     //Construct Polygon Table and Edge Table
     for(auto & ptr_tr:triangles){
@@ -201,9 +151,6 @@ int main(){
         int y1, y2, y3;
         PtrEdge edge1, edge2, edge3;
         tie(y1, y2, y3, edge1, edge2, edge3) = ptr_tr->caculate_edge();
-        // edges_table[y1].push_back(edge1);
-        // edges_table[y2].push_back(edge2);
-        // edges_table[y3].push_back(edge3);
     }
 
     //check if model read successfully: Plot frame.
@@ -233,16 +180,25 @@ int main(){
         //plot here
         for(auto & active_edge:active_edges_table){
             double z = active_edge->z_l;
+            // cout << "DEBUG: id " << active_edge->id << " " << active_edge->x_l << " " << active_edge->x_r << endl; 
             cv::Vec3b color = triangles[active_edge->id]->color;
             for(int x = active_edge->x_l; x <= active_edge->x_r; x++){
-                z += active_edge->dz_x;
-                if(z <= z_buffer[i][x]){
-                    z_buffer[i][x] = z;
+                if(z <= z_buffer(i, x)){
+                    z_buffer(i, x) = z;
                     color_buffer.at<cv::Vec3b>(i, x) = color;
                     //assign color.
                 }
+                z += active_edge->dz_x;
             }
         }
+
+        // if(i == 424){
+        //     ofstream log_intern("/home/taokun/intern.txt");
+        //     for(int j = 160; j <= 320; j++){
+        //         log_intern << z_buffer(i, j) << " ";
+        //     }
+        //     log_intern.close();
+        // }
 
         for(auto it = active_edges_table.begin(); it != active_edges_table.end();){
             auto &active_edge = *it;
@@ -272,5 +228,66 @@ int main(){
     }
 
     cv::imwrite("/home/taokun/result.jpg", color_buffer);
+    // ofstream log_txt("/home/taokun/test.txt");
+    // for(int i = 0; i < HEIGHT; i++){
+    //     for(int j = 0; j < WIDTH; j++){
+    //         log_txt << (int)color_buffer.at<cv::Vec3b>(i, j)(1) << " ";
+    //     }
+    //     log_txt << "\n";
+    // }
+    // log_txt.close();
+}
+
+void parse_object_file(const char *object_file_path, vector<PtrVertice> & vertices, vector<PtrTriangle> & triangles){
+    FILE *object_file = fopen(object_file_path, "r");
+    char buffer[1000];
+    char buffer1[100], buffer2[100], buffer3[100];
+    while(fscanf(object_file, "%[^\n]\n", buffer) != -1){
+        if(starts_with(buffer, "vn")){
+            continue;
+        }
+        else if(starts_with(buffer, "v")){
+            double x, y, z;
+            sscanf(buffer, "v %lf %lf %lf", &x, &y, &z);
+            PtrVertice ptr_vertice = make_shared<Vertice>(x, y, z);
+            vertices.push_back(ptr_vertice);
+        }
+        else if(starts_with(buffer, "f")){
+            int v1, v2, v3;
+            sscanf(buffer, "f %s %s %s", buffer1, buffer2, buffer3);
+            sscanf(buffer1, "%d ", &v1);
+            sscanf(buffer2, "%d ", &v2);
+            sscanf(buffer3, "%d ", &v3);
+            PtrTriangle ptr_triangle = make_shared<Triangle>(vertices[v1 - 1], vertices[v2 - 1], vertices[v3 - 1]);
+            triangles.push_back(ptr_triangle);
+        }
+    }
+}
+
+int main(){
+
+    vector<PtrVertice> vertices;
+    vector<PtrTriangle> triangles;
+    const char object_file_path[1000] = "/home/taokun/Work/Homework/scanline/model/bunny.obj";
+
+    TicToc t_parse;
+    parse_object_file(object_file_path, vertices, triangles);
+    cout << "Parse object file takes " << t_parse.toc() << "ms" << endl;
+
+    //rotate and scale all the vertices 
+    TicToc t_transform;
+    transform_vertices(vertices);
+    cout << "Transform model takes " << t_transform.toc() << "ms" << endl;
+
+  
+    // auto [min_x_element, max_x_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[0] < v2->point[0];});
+    // auto [min_y_element, max_y_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[1] < v2->point[1];});
+    // auto [min_x, max_x] = make_tuple((*min_x_element)->point[0], (*max_x_element)->point[0]);
+    // auto [min_y, max_y] = make_tuple((*min_y_element)->point[1], (*max_y_element)->point[1]);
+    // cout << "min_x , max_x " <<  "min_y, max_y " << min_x << " " << max_x << " " << min_y << " " << max_y << endl;
+    TicToc t_render;
+    render_models(vertices, triangles);
+    cout << "Render models takes " << t_render.toc() << "ms" << endl;
+
     return 0;
 }

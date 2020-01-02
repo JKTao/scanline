@@ -24,3 +24,11 @@ class TicToc
   private:
     std::chrono::time_point<std::chrono::system_clock> start, end;
 };
+
+bool starts_with(char *str, const char *pattern){
+    int i = 0;
+    while(str[i] == pattern[i] && str[i] != '\0'){
+        i++;
+    }
+    return (pattern[i] == '\0');
+}
