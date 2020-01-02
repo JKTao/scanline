@@ -9,7 +9,8 @@
 #include <memory>
 #include <algorithm>
 #include <fstream>
-#include <utility.hpp>
+#include "utility.hpp"
+#include "yaml-cpp/yaml.h"
 
 
 using namespace std;
@@ -21,10 +22,6 @@ using PtrVertice = shared_ptr<Vertice>;
 using PtrTriangle = shared_ptr<Triangle>;
 using PtrEdge = shared_ptr<Edge>;
 using PtrActiveEdge = shared_ptr<ActiveEdge>;
-
-const int WIDTH = 480;
-const int HEIGHT = 640;
-
 
 struct Vertice{
     Eigen::Vector3d point;
@@ -114,8 +111,14 @@ struct ActiveEdge{
 cv::Scalar Edge::color = cv::Scalar(0, 255, 0);
 int Triangle::count = 0;
 
+void read_configure(string & configure_file_path, int & WIDTH, int & HEIGHT, string & object_file_path){
+    YAML::Node config = YAML::LoadFile(configure_file_path);
+    object_file_path = config["object_path"].as<string>();
+    WIDTH = config["width"].as<int>();
+    HEIGHT = config["height"].as<int>();
+}
 
-void transform_vertices(vector<PtrVertice> & vertices){
+void transform_vertices(vector<PtrVertice> & vertices, int HEIGHT, int WIDTH){
     auto [min_x_element, max_x_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[0] < v2->point[0];});
     auto [min_y_element, max_y_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[1] < v2->point[1];});
     auto [min_x, max_x] = make_tuple((*min_x_element)->point[0], (*max_x_element)->point[0]);
@@ -135,7 +138,7 @@ void transform_vertices(vector<PtrVertice> & vertices){
     // cout << "min_x , max_x" <<  "min_y, max_y" << min_x << " " << max_x << " " << min_y << " " << max_y << endl;
 }
 
-void render_models(vector<PtrVertice> & vertices, vector<PtrTriangle> triangles){
+void render_models(vector<PtrVertice> & vertices, vector<PtrTriangle> triangles, int HEIGHT, int WIDTH){
     vector<vector<PtrTriangle>> polygons_table(HEIGHT + 1);
     // vector<vector<PtrEdge>> edges_table(HEIGHT + 1);
     list<PtrActiveEdge> active_edges_table;
@@ -265,18 +268,20 @@ void parse_object_file(const char *object_file_path, vector<PtrVertice> & vertic
 }
 
 int main(){
-
+    string config_path = "/home/taokun/Work/Homework/scanline/config/config.yaml";
     vector<PtrVertice> vertices;
     vector<PtrTriangle> triangles;
-    const char object_file_path[1000] = "/home/taokun/Work/Homework/scanline/model/bunny.obj";
+    int WIDTH, HEIGHT;
+    string object_file_path;
+    read_configure(config_path, WIDTH, HEIGHT, object_file_path);
 
     TicToc t_parse;
-    parse_object_file(object_file_path, vertices, triangles);
+    parse_object_file(object_file_path.c_str(), vertices, triangles);
     cout << "Parse object file takes " << t_parse.toc() << "ms" << endl;
 
     //rotate and scale all the vertices 
     TicToc t_transform;
-    transform_vertices(vertices);
+    transform_vertices(vertices, HEIGHT, WIDTH);
     cout << "Transform model takes " << t_transform.toc() << "ms" << endl;
 
   
@@ -286,7 +291,7 @@ int main(){
     // auto [min_y, max_y] = make_tuple((*min_y_element)->point[1], (*max_y_element)->point[1]);
     // cout << "min_x , max_x " <<  "min_y, max_y " << min_x << " " << max_x << " " << min_y << " " << max_y << endl;
     TicToc t_render;
-    render_models(vertices, triangles);
+    render_models(vertices, triangles, HEIGHT, WIDTH);
     cout << "Render models takes " << t_render.toc() << "ms" << endl;
 
     return 0;
