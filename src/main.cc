@@ -15,9 +15,12 @@ using namespace std;
 struct Vertice;
 struct Triangle;
 struct Edge;
+struct ActiveEdge;
 using PtrVertice = shared_ptr<Vertice>;
 using PtrTriangle = shared_ptr<Triangle>;
 using PtrEdge = shared_ptr<Edge>;
+using PtrActiveEdge = shared_ptr<ActiveEdge>;
+
 const int WIDTH = 640;
 const int HEIGHT = 480;
 
@@ -52,19 +55,18 @@ struct Edge{
         dy = (int)v1->point[1] - (int)v2->point[1];
     }
     void plot(cv::Mat & img){
-        cout << "DEBUG" << img.size() << v1->point[0] << " " << v1->point[1] << endl;
-        //cv::line(img, cv::Point2d(v1->point[0], v1->point[1]), cv::Point2d(v2->point[0], v2->point[1]), color, 1);
+        // cout << "DEBUG" << img.size() << v1->point[0] << " " << v1->point[1] << endl;
+        cv::line(img, cv::Point2d(v1->point[0], v1->point[1]), cv::Point2d(v2->point[0], v2->point[1]), color, 1);
     }
 };
 
-cv::Scalar Edge::color = cv::Scalar(0, 255, 0);
 struct Triangle{
     static int count;
     PtrVertice v[3];
     PtrEdge edge1, edge2, edge3;
     int id;
     double a, b, c, d;
-    int color[3];
+    cv::Vec3b color;
     // double max_y_, min_y_;
     int dy;
     int max_y, min_y;
@@ -80,16 +82,42 @@ struct Triangle{
         Eigen::Vector3d e1 = v[0]->point - v[1]->point, e2 = v[1]->point - v[2]->point;
         Eigen::Vector3d normal = e1.cross(e2).normalized();
         tie(a, b, c, d) = make_tuple(normal[0], normal[1], normal[2], -normal.adjoint() * v[0]->point);
+
         edge1 = make_shared<Edge>(v[0], v[2], id);
         edge2 = make_shared<Edge>(v[0], v[1], id);
         edge3 = make_shared<Edge>(v[1], v[2], id);
         //divide the point to edge3
         edge2->dy--;
+
+        int color_ = 255 * normal[2];
+        color = cv::Vec3b(color_, color_, color_);
         return make_tuple(v[0]->point[1], v[0]->point[1], v[1]->point[1], edge1, edge2, edge3);
     }
     Triangle(PtrVertice v1, PtrVertice v2, PtrVertice v3):v{v1, v2, v3}, id(count++){
     }
 };
+
+struct ActiveEdge{
+    double x_l, dx_l;
+    double x_r, dx_r;
+    int dy_l, dy_r;
+
+    double z_l, dz_x, dz_y;
+    int id;
+    ActiveEdge(PtrEdge & e1, PtrEdge & e2, PtrTriangle & polygon){
+        PtrEdge e_l = e2, e_r = e1;
+        if(e1->x + e1->dx < e1->x + e2->dx){
+            e_l = e1;
+            e_r = e2;
+        }
+        tie(x_l, dx_l, x_r, dx_r, dy_l, dy_r, id) = make_tuple(e_l->x, e_l->dx, e_r->x, e_r->dx, e_l->dy, e_r->dy, polygon->id);
+        z_l = polygon->v[0]->point[2];
+        dz_x = -polygon->a / polygon->c;
+        dz_y = polygon->b / polygon->c;
+    }
+}; 
+
+cv::Scalar Edge::color = cv::Scalar(0, 255, 0);
 int Triangle::count = 0;
 
 
@@ -159,14 +187,11 @@ int main(){
 
 
     vector<vector<PtrTriangle>> polygons_table(HEIGHT + 1);
-    vector<vector<PtrEdge>> edges_table(HEIGHT + 1);
-
-    vector<PtrEdge> active_edges_table;
-    vector<PtrTriangle> active_polygons_table;
-
-    double z_buffer[WIDTH];
-    int color_buffer[WIDTH][3];
-    int flag;
+    // vector<vector<PtrEdge>> edges_table(HEIGHT + 1);
+    list<PtrActiveEdge> active_edges_table;
+    list<PtrTriangle> active_polygons_table;
+    double z_buffer[HEIGHT][WIDTH];
+    cv::Mat color_buffer(HEIGHT, WIDTH, CV_8UC3);
 
     //Construct Polygon Table and Edge Table
     for(auto & ptr_tr:triangles){
@@ -176,9 +201,9 @@ int main(){
         int y1, y2, y3;
         PtrEdge edge1, edge2, edge3;
         tie(y1, y2, y3, edge1, edge2, edge3) = ptr_tr->caculate_edge();
-        edges_table[y1].push_back(edge1);
-        edges_table[y2].push_back(edge2);
-        edges_table[y3].push_back(edge3);
+        // edges_table[y1].push_back(edge1);
+        // edges_table[y2].push_back(edge2);
+        // edges_table[y3].push_back(edge3);
     }
 
     //check if model read successfully: Plot frame.
@@ -190,17 +215,62 @@ int main(){
     }
     cv::imwrite("/home/taokun/test.jpg", img);
     
-
     //Construct Active Polygon Table, and plot Active Edge Table
     for(int i = HEIGHT; i > 0; i--){
         auto & polygons_list = polygons_table[i];
-        auto & edges_list = edges_table[i];
+        // auto & edges_list = edges_table[i];
 
         //insert polygon from polygons_list into active polygon tables.
         //insert edge from polygon into active edge tables.
+        active_polygons_table.insert(active_polygons_table.end(), polygons_list.begin(), polygons_list.end());
+        for(auto & polygon:polygons_list){
+            //make active edge
+            auto e1 = polygon->edge1, e2 = polygon->edge2;
+            auto active_edge = make_shared<ActiveEdge>(e1, e2, polygon);
+            active_edges_table.push_back(active_edge);
+        }
+        
+        //plot here
+        for(auto & active_edge:active_edges_table){
+            double z = active_edge->z_l;
+            cv::Vec3b color = triangles[active_edge->id]->color;
+            for(int x = active_edge->x_l; x <= active_edge->x_r; x++){
+                z += active_edge->dz_x;
+                if(z <= z_buffer[i][x]){
+                    z_buffer[i][x] = z;
+                    color_buffer.at<cv::Vec3b>(i, x) = color;
+                    //assign color.
+                }
+            }
+        }
 
-        //plot here.
-        //check all the element in polygons, and remove some polygons and edges.
+        for(auto it = active_edges_table.begin(); it != active_edges_table.end();){
+            auto &active_edge = *it;
+            auto &triangle = triangles[active_edge->id];
+            auto &edge3 = triangle->edge3;
+
+            //firstly decrease dy of active polygon and active edge.
+            triangle->dy--;
+            active_edge->dy_l--;
+            active_edge->dy_r--;
+            active_edge->z_l += active_edge->dz_y + active_edge->dx_l * active_edge->dz_x;
+            active_edge->x_l += active_edge->dx_l;
+            active_edge->x_r += active_edge->dx_r;
+            //see if active edge failed.
+            if(triangle->dy < 0){
+                //remove this active edge and polygon
+                it = active_edges_table.erase(it);
+                continue;
+            }
+            else if(active_edge->dy_r < 0){
+                tie(active_edge->x_r, active_edge->dx_r, active_edge->dy_r) = make_tuple(edge3->x, edge3->dx, edge3->dy);
+            }else if(active_edge->dy_l < 0){
+                tie(active_edge->x_l, active_edge->dx_l, active_edge->dy_l) = make_tuple(edge3->x, edge3->dx, edge3->dy);
+            }
+            it++;
+        }
     }
-    
+
+    cv::imwrite("/home/taokun/result.jpg", color_buffer);
+    return 0;
 }
