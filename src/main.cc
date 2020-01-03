@@ -43,7 +43,7 @@ struct Edge{
         }else{
             dx = -(v1->point[0] - v2->point[0]) / (v1->point[1] - v2->point[1]);
         }
-        dy = (int)v1->point[1] - (int)v2->point[1];
+        dy = v1->point[1] - v2->point[1];
     }
     void plot(cv::Mat & img){
         // cout << "DEBUG" << img.size() << v1->point[0] << " " << v1->point[1] << endl;
@@ -60,13 +60,13 @@ struct Triangle{
     cv::Vec3b color;
     // double max_y_, min_y_;
     int dy;
-    int max_y, min_y;
+    double max_y, min_y;
     tuple<int, int, int> caculate_triangle(){
         sort(begin(v), end(v), [](const PtrVertice & v1, const PtrVertice & v2){return v1->point[1] > v2->point[1];} );
         max_y = v[0]->point[1];
         min_y = v[2]->point[1];
         dy = max_y - min_y;
-        return make_tuple(max_y, min_y, dy);
+        return make_tuple(int(max_y + 0.5), int(min_y + 0.5), dy);
     }
     tuple<int, int, int, PtrEdge, PtrEdge, PtrEdge> caculate_edge(){
         //TODO: What if the edge is parallel to x axis?
@@ -96,17 +96,25 @@ struct ActiveEdge{
     int dy_l, dy_r;
 
     double z_l, dz_x, dz_y;
-    int id;
+    PtrTriangle triangle;
     ActiveEdge(PtrEdge & e1, PtrEdge & e2, PtrTriangle & polygon){
         PtrEdge e_l = e2, e_r = e1;
         if(e1->x + e1->dx < e1->x + e2->dx){
             e_l = e1;
             e_r = e2;
         }
-        tie(x_l, dx_l, x_r, dx_r, dy_l, dy_r, id) = make_tuple(e_l->x, e_l->dx, e_r->x, e_r->dx, e_l->dy, e_r->dy, polygon->id);
-        z_l = polygon->v[0]->point[2];
+        tie(dx_l, dx_r, dy_l, dy_r, triangle) = make_tuple(e_l->dx, e_r->dx, e_l->dy, e_r->dy, polygon);
+        //TODO: recaculate x_l and x_r.
+        x_l = e_l->x;
+        x_r = e_r->x;
+        // double y = e_l->v1->point[1];
+        // double diff_y = y - int(y+0.5) + 0.5;
+        // x_l = e_l->x + dx_l * diff_y;
+        // x_r = e_r->x + dx_r * diff_y;
         dz_x = -polygon->a / polygon->c;
         dz_y = polygon->b / polygon->c;
+        // z_l = e_l->v1->point[2] + dz_y * diff_y + dz_x * dx_l * diff_y;
+        z_l = e_l->v1->point[2];
     }
 }; 
 
@@ -207,7 +215,7 @@ void render_models(vector<PtrVertice> & vertices, vector<PtrTriangle> triangles,
         for(auto & active_edge:active_edges_table){
             double z = active_edge->z_l;
             // cout << "DEBUG: id " << active_edge->id << " " << active_edge->x_l << " " << active_edge->x_r << endl; 
-            cv::Vec3b color = triangles[active_edge->id]->color;
+            cv::Vec3b color = active_edge->triangle->color;
             for(int x = active_edge->x_l; x <= active_edge->x_r; x++){
                 if(z <= z_buffer(i, x)){
                     z_buffer(i, x) = z;
@@ -228,7 +236,7 @@ void render_models(vector<PtrVertice> & vertices, vector<PtrTriangle> triangles,
 
         for(auto it = active_edges_table.begin(); it != active_edges_table.end();){
             auto &active_edge = *it;
-            auto &triangle = triangles[active_edge->id];
+            auto &triangle = active_edge->triangle;
             auto &edge3 = triangle->edge3;
 
             //firstly decrease dy of active polygon and active edge.
