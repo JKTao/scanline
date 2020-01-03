@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 2.8) 
 project(Scanline)
-set(CMAKE_CXX_COMPILER "g++-7")
-set(CMAKE_C_COMPILER "gcc-7")
 set(CMAKE_CXX_FLAGS "-std=c++17 -O2")
 # set(CMAKE_BUILD_TYPE "Debug")
 find_package(Eigen3 REQUIRED) 

@@ -9,6 +9,7 @@
 #include <memory>
 #include <algorithm>
 #include <fstream>
+#include <cmath>
 #include "utility.hpp"
 #include "yaml-cpp/yaml.h"
 
@@ -38,7 +39,7 @@ struct Edge{
     PtrVertice v1, v2;
     Edge(PtrVertice v1, PtrVertice v2, int id):v1(v1), v2(v2), x(v1->point[0]), id(id){
         if(v1->point[1] == v2->point[1]){
-            dx = 10;
+            dx = 0;
         }else{
             dx = -(v1->point[0] - v2->point[0]) / (v1->point[1] - v2->point[1]);
         }
@@ -80,7 +81,8 @@ struct Triangle{
         //divide the point to edge3
         edge2->dy--;
 
-        int color_ = abs(255 * normal[2]);
+        double theta = acos(abs(normal[2]));
+        int color_ = int(200 * theta + 55);
         color = cv::Vec3b(color_, color_, color_);
         return make_tuple(v[0]->point[1], v[1]->point[1], v[2]->point[1], edge1, edge2, edge3);
     }
@@ -111,31 +113,52 @@ struct ActiveEdge{
 cv::Scalar Edge::color = cv::Scalar(0, 255, 0);
 int Triangle::count = 0;
 
-void read_configure(string & configure_file_path, int & WIDTH, int & HEIGHT, string & object_file_path){
+void read_configure(string & configure_file_path, int & WIDTH, int & HEIGHT, string & object_file_path, Eigen::Vector3d & w){
     YAML::Node config = YAML::LoadFile(configure_file_path);
     object_file_path = config["object_path"].as<string>();
     WIDTH = config["width"].as<int>();
     HEIGHT = config["height"].as<int>();
+    YAML::Node rotation_vector = config["rotation_vector"];
+    for(int i = 0; i < rotation_vector.size(); i++){
+        w[i] = rotation_vector[i].as<double>();
+    }
 }
 
-void transform_vertices(vector<PtrVertice> & vertices, int HEIGHT, int WIDTH){
+void normalize_vertices(vector<PtrVertice> & vertices, int HEIGHT, int WIDTH, Eigen::Vector3d w = Eigen::Vector3d(0, 0, 0)){
     auto [min_x_element, max_x_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[0] < v2->point[0];});
     auto [min_y_element, max_y_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[1] < v2->point[1];});
+    auto [min_z_element, max_z_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[2] < v2->point[2];});
     auto [min_x, max_x] = make_tuple((*min_x_element)->point[0], (*max_x_element)->point[0]);
     auto [min_y, max_y] = make_tuple((*min_y_element)->point[1], (*max_y_element)->point[1]);
+    auto [min_z, max_z] = make_tuple((*min_z_element)->point[2], (*max_z_element)->point[2]);
 
-    double original_center_x = (max_x + min_x) / 2, original_center_y = (max_y + min_y) / 2;
-    double original_scale_x = (max_x - min_x), original_scale_y = (max_y - min_y);
-    double scale_x = WIDTH / 3.0 / original_scale_x, scale_y = HEIGHT / 3.0 / original_scale_y, scale_z = 1;
+    // cout << "min_x, max_x " << min_x << " " << max_x << endl;
+    // cout << "min_y, max_y " << min_y << " " << max_y << endl;
+    // cout << "min_z, max_z " << min_z << " " << max_z << endl;
 
-    Eigen::Matrix3d R = Eigen::Matrix3d::Identity();
-    Eigen::Vector3d s(scale_x, scale_y, scale_z);
+    double original_center_x = (max_x + min_x) / 2, original_center_y = (max_y + min_y) / 2, original_center_z = (max_z + min_z)/2;
+    double original_scale_x = (max_x - min_x), original_scale_y = (max_y - min_y), original_scale_z = (max_z - min_z);
+    double original_scale = sqrt(original_scale_x * original_scale_x + original_scale_y * original_scale_y + original_scale_z * original_scale_z);
+    double final_scale = min(WIDTH, HEIGHT);
+    double scale = final_scale / original_scale / 1.2;
+    cout << "original_scale " << original_scale << "scale " << scale << " " << endl;
+
+    Eigen::AngleAxis rotation_vector(w.norm(), w.normalized());
+    Eigen::Matrix3d R = rotation_vector.toRotationMatrix();
+    Eigen::Vector3d s(scale, scale, scale);
     Eigen::Matrix3d S = s.asDiagonal();
-    Eigen::Vector3d center(original_center_x, original_center_y, -100);
+    Eigen::Vector3d center(original_center_x, original_center_y, original_center_z);
     Eigen::Vector3d bias(WIDTH/2, HEIGHT/2, -100);
+    cout << "center " << center << endl;
+    for_each(vertices.begin(), vertices.end(), [R, S, center, bias](PtrVertice & vertice){vertice->point =  S * (vertice->point - center) + bias; });
 
-    for_each(vertices.begin(), vertices.end(), [R, S, center, bias](PtrVertice & vertice){vertice->point = R * (S * (vertice->point - center) + bias); });
-    // cout << "min_x , max_x" <<  "min_y, max_y" << min_x << " " << max_x << " " << min_y << " " << max_y << endl;
+}
+
+void transform_vertices(vector<PtrVertice> & vertices, int HEIGHT, int WIDTH, Eigen::Vector3d w = Eigen::Vector3d(0, 0, 0)){
+    Eigen::AngleAxis rotation_vector(w.norm(), w.normalized());
+    Eigen::Matrix3d R = rotation_vector.toRotationMatrix();
+    Eigen::Vector3d bias(WIDTH/2, HEIGHT/2, -100);
+    for_each(vertices.begin(), vertices.end(), [R, bias](PtrVertice & vertice){vertice->point = R * (vertice->point - bias) + bias; });
 }
 
 void render_models(vector<PtrVertice> & vertices, vector<PtrTriangle> triangles, int HEIGHT, int WIDTH){
@@ -272,8 +295,9 @@ int main(){
     vector<PtrVertice> vertices;
     vector<PtrTriangle> triangles;
     int WIDTH, HEIGHT;
+    Eigen::Vector3d w;
     string object_file_path;
-    read_configure(config_path, WIDTH, HEIGHT, object_file_path);
+    read_configure(config_path, WIDTH, HEIGHT, object_file_path, w);
 
     TicToc t_parse;
     parse_object_file(object_file_path.c_str(), vertices, triangles);
@@ -281,18 +305,19 @@ int main(){
 
     //rotate and scale all the vertices 
     TicToc t_transform;
-    transform_vertices(vertices, HEIGHT, WIDTH);
+    normalize_vertices(vertices, HEIGHT, WIDTH, w);
     cout << "Transform model takes " << t_transform.toc() << "ms" << endl;
 
   
-    // auto [min_x_element, max_x_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[0] < v2->point[0];});
-    // auto [min_y_element, max_y_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[1] < v2->point[1];});
-    // auto [min_x, max_x] = make_tuple((*min_x_element)->point[0], (*max_x_element)->point[0]);
-    // auto [min_y, max_y] = make_tuple((*min_y_element)->point[1], (*max_y_element)->point[1]);
-    // cout << "min_x , max_x " <<  "min_y, max_y " << min_x << " " << max_x << " " << min_y << " " << max_y << endl;
+    auto [min_x_element, max_x_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[0] < v2->point[0];});
+    auto [min_y_element, max_y_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[1] < v2->point[1];});
+    auto [min_x, max_x] = make_tuple((*min_x_element)->point[0], (*max_x_element)->point[0]);
+    auto [min_y, max_y] = make_tuple((*min_y_element)->point[1], (*max_y_element)->point[1]);
+    cout << "min_x , max_x " <<  "min_y, max_y " << min_x << " " << max_x << " " << min_y << " " << max_y << endl;
     TicToc t_render;
     render_models(vertices, triangles, HEIGHT, WIDTH);
     cout << "Render models takes " << t_render.toc() << "ms" << endl;
+
 
     return 0;
 }
