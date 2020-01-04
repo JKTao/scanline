@@ -5,6 +5,8 @@
 #include <memory>
 #include <tuple>
 
+const double color_base = 180;
+const double color_scale = color_base/3.14159;
 struct Vertice{
     Eigen::Vector3d point;
     int index;
@@ -21,7 +23,7 @@ struct Edge{
     int id;
     bool flag = true;
     PtrVertice v1, v2;
-    Edge(PtrVertice v1_, PtrVertice v2_, int id):v1(v1_), v2(v2_), x(v1_->point[0]), id(id){
+    Edge(PtrVertice v1_, PtrVertice v2_, int id):v1(v1_), v2(v2_), id(id){
         if(v1->point[1] < v2->point[1]){
             std::swap(v1, v2);
         }
@@ -32,6 +34,7 @@ struct Edge{
         }
         dy = v1->point[1] - v2->point[1];
         y = v1->point[1];
+        x = v1->point[0];
     }
     void plot(cv::Mat & img){
         // cout << "DEBUG" << img.size() << v1->point[0] << " " << v1->point[1] << endl;
@@ -73,13 +76,12 @@ struct Polygon{
         Eigen::Vector3d normal = e1.cross(e2).normalized();
         std::tie(a, b, c, d) = std::make_tuple(normal[0], normal[1], normal[2], -normal.adjoint() * vn[0]->point);
         double theta = acos(abs(normal[2]));
-        int color_ = int(200 * theta + 55);
+        int color_ = int(color_scale * theta + 254 - color_base);
         color = cv::Vec3b(color_, color_, color_);
     }
 
     Polygon(std::vector<PtrVertice> vn):id(count++){
         this->vn = vn;
-        caculate_normal();
     }
 };
 
@@ -94,13 +96,13 @@ struct ActiveEdge{
     double z_l, dz_x, dz_y;
     PtrPolygon polygon;
     ActiveEdge(PtrEdge e1, PtrEdge e2, PtrPolygon & polygon){
-        if(e1->x + e1->dx < e1->x + e2->dx){
+        if(e1->x > e2->x || (e1->x == e2->x && e1->dx > e2->dx)){
             swap(e1, e2);
         }
         std::tie(dx_l, dx_r, dy_l, dy_r, this->polygon) = std::make_tuple(e1->dx, e2->dx, e1->dy, e2->dy, polygon);
         //TODO: recaculate z_l
         x_l = e1->x;
-        x_r = e1->x;
+        x_r = e2->x;
         dz_x = -polygon->a / polygon->c;
         dz_y = polygon->b / polygon->c;
         // z_l = e_l->v1->point[2] + dz_y * diff_y + dz_x * dx_l * diff_y;

@@ -12,15 +12,16 @@ int main(){
     TicToc t_parse;
     Model model(config_path);
     cout << "Parse object file takes " << t_parse.toc() << "ms" << endl;
+    cout << "There are " << model.polygons.size() << " faces"<< endl;
 
     //rotate and scale all the vertices 
     TicToc t_transform;
-    model.normalize_vertices();
+    model.normalize_vertices(model.rotation_vector);
     cout << "Transform model takes " << t_transform.toc() << "ms" << endl;
 
     TicToc t_quantize;
     model.quantize_vertices();
-    cout << "Transform model takes " << t_quantize.toc() << "ms" << endl;
+    cout << "Quantize model takes " << t_quantize.toc() << "ms" << endl;
 
     TicToc t_render;
     model.render_model();

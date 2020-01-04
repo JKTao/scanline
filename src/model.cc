@@ -35,7 +35,7 @@ void Model::normalize_vertices(Eigen::Vector3d w){
     double original_scale = sqrt(original_scale_x * original_scale_x + original_scale_y * original_scale_y + original_scale_z * original_scale_z);
     double final_scale = min(WIDTH, HEIGHT);
     double scale = final_scale / original_scale / 1.2;
-    cout << "original_scale " << original_scale << "scale " << scale << " " << endl;
+    // cout << "original_scale " << original_scale << "scale " << scale << " " << endl;
 
     Eigen::AngleAxis rotation_vector(w.norm(), w.normalized());
     Eigen::Matrix3d R = rotation_vector.toRotationMatrix();
@@ -43,8 +43,10 @@ void Model::normalize_vertices(Eigen::Vector3d w){
     Eigen::Matrix3d S = s.asDiagonal();
     Eigen::Vector3d center(original_center_x, original_center_y, original_center_z);
     Eigen::Vector3d bias(WIDTH/2, HEIGHT/2, -100);
-    cout << "center " << center << endl;
-    for_each(vertices.begin(), vertices.end(), [R, S, center, bias](PtrVertice & vertice){vertice->point =  S * (vertice->point - center) + bias; });
+    // cout << "center " << center << endl;
+    // cout << R << endl;
+    for_each(vertices.begin(), vertices.end(), [R, S, center, bias](PtrVertice & vertice){vertice->point =  R * S * (vertice->point - center) + bias; });
+    for_each(polygons.begin(), polygons.end(), [](PtrPolygon & polygon){polygon->caculate_normal();});
 }
 
 void Model::quantize_vertices(){
@@ -138,6 +140,7 @@ void Model::build_structure(){
         ptr_tr->caculate_edge();
         for(auto & edge:ptr_tr->edges){
             if(edge->flag){
+                // cout << edge->y << endl;
                 edges_table[edge->y].push_back(edge);
             }
         }
@@ -163,12 +166,19 @@ void Model::z_buffer_scanline(){
     for(int i = HEIGHT; i > 0; i--){
         auto & edges_list = edges_table[i];
         vector<PtrEdge> left_edges_list;
+        // if(i == 355){
+        //     cout << edges_table[i].size() << endl;
+        //     cout << edges_list.size() << endl;
+        // }
 
         //insert polygon from polygons_list into active polygon tables.
         //insert edge from polygon into active edge tables.
         sort(edges_list.begin(), edges_list.end(), [](const PtrEdge & edge1, const PtrEdge & edge2){return edge1->id < edge2->id; });
-        int j = 0;
-        for(; j < edges_list.size() - 1; j++){
+        int j;
+        for(j = 0; j < edges_list.size() - 1; j++){
+            if(edges_list.size() <= 1){
+                break;
+            }
             if(edges_list[j]->id == edges_list[j+1]->id){
                 auto active_edge = make_shared<ActiveEdge>(edges_list[j], edges_list[j+1], polygons[edges_list[j]->id]);
                 active_edges_table.push_back(active_edge);
@@ -185,6 +195,13 @@ void Model::z_buffer_scanline(){
             double z = active_edge->z_l;
             // cout << "DEBUG: id " << active_edge->id << " " << active_edge->x_l << " " << active_edge->x_r << endl; 
             cv::Vec3b color = active_edge->polygon->color;
+            if(active_edge->polygon->id == 2){
+                // cout << active_edge->x_l << active_edge->x_r << endl;
+            }
+            int x_l = std::round(active_edge->x_l), x_r = std::round(active_edge->x_r);
+            if(x_l > x_r){
+                cout << "FUCK YOU " << x_l << " " << x_r << " " << active_edge->dx_l << " " <<  active_edge->dx_r << " " << active_edge->polygon->id << " " << i <<  endl;
+            }
             for(int x = active_edge->x_l; x <= active_edge->x_r; x++){
                 if(z <= z_buffer(i, x)){
                     z_buffer(i, x) = z;
@@ -215,19 +232,19 @@ void Model::z_buffer_scanline(){
             active_edge->x_l += active_edge->dx_l;
             active_edge->x_r += active_edge->dx_r;
             //see if active edge failed.
-            if(polygon->dy < 0){
+            if((polygon->dy < 0) || (active_edge->dy_r < 0 && active_edge->dy_l < 0)){
                 //remove this active edge and polygon
                 it = active_edges_table.erase(it);
                 continue;
             }
-            else if(active_edge->dy_r < 0){
+            if(active_edge->dy_r < 0){
                 auto edge_element = find_if(left_edges_list.begin(), left_edges_list.end(), [active_edge](const PtrEdge & A){return A->id == active_edge->polygon->id;});
                 PtrEdge edge = *edge_element;
-                tie(active_edge->x_r, active_edge->dx_r, active_edge->dy_r) = make_tuple(edge->x, edge->dx, edge->dy);
+                tie(active_edge->x_r, active_edge->dx_r, active_edge->dy_r) = make_tuple(edge->x + edge->dx, edge->dx, edge->dy);
             }else if(active_edge->dy_l < 0){
                 auto edge_element = find_if(left_edges_list.begin(), left_edges_list.end(), [active_edge](const PtrEdge & A){return A->id == active_edge->polygon->id;});
                 PtrEdge edge = *edge_element;
-                tie(active_edge->x_l, active_edge->dx_l, active_edge->dy_l) = make_tuple(edge->x, edge->dx, edge->dy);
+                tie(active_edge->x_l, active_edge->dx_l, active_edge->dy_l) = make_tuple(edge->x + edge->dx, edge->dx, edge->dy);
             }
             it++;
         }
