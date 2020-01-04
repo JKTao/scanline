@@ -7,10 +7,10 @@
 
 
 struct Model{
-    using PtrVertice = std::shared_ptr<Vertice>; 
-    using PtrPolygon = std::shared_ptr<Polygon>;
-    using PtrEdge = std::shared_ptr<Edge>;
-    using PtrActiveEdge = std::shared_ptr<ActiveEdge>;
+    using PtrVertice = Vertice*;
+    using PtrPolygon = Polygon*;
+    using PtrEdge = Edge*;
+    using PtrActiveEdge = ActiveEdge*;
 
     std::vector<PtrVertice> vertices;
     std::vector<PtrVertice> current_vertices;

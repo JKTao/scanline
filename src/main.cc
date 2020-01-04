@@ -23,13 +23,13 @@ int main(){
     model.quantize_vertices();
     cout << "Quantize model takes " << t_quantize.toc() << "ms" << endl;
 
-    TicToc t_render;
+    TicToc t_build;
     model.build_structure();
-    cout << "Render models takes " << t_render.toc() << "ms" << endl;
+    cout << "Build structure takes " << t_build.toc() << "ms" << endl;
 
 
-    TicToc t_buffer;
+    TicToc t_scanline;
     model.z_buffer_scanline();
-    cout << "Render models takes " << t_buffer.toc() << "ms" << endl;
+    cout << "Render models takes " << t_scanline.toc() << "ms" << endl;
     return 0;
 }

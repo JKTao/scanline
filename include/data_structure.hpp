@@ -14,7 +14,7 @@ struct Vertice{
 };
 
 struct Edge{
-    using PtrVertice = std::shared_ptr<Vertice>;
+    using PtrVertice = Vertice*;
     static cv::Scalar color;
     int x;
     int y;
@@ -43,8 +43,8 @@ struct Edge{
 };
 
 struct Polygon{
-    using PtrVertice = std::shared_ptr<Vertice>;
-    using PtrEdge = std::shared_ptr<Edge>;
+    using PtrVertice = Vertice*;
+    using PtrEdge = Edge*;
     static int count;
     std::vector<PtrVertice> vn;
     std::vector<PtrEdge> edges;
@@ -65,10 +65,10 @@ struct Polygon{
         //TODO: What if the edge is parallel to x axis?
         int i;
         for(i = 0; i < vn.size() - 1; i++){
-            auto edge = std::make_shared<Edge>(vn[i], vn[i+1], id);
+            auto edge = new Edge(vn[i], vn[i+1], id);
             edges.emplace_back(edge);
         }
-        auto edge = std::make_shared<Edge>(vn[i], vn[0], id);
+        auto edge = new Edge(vn[i], vn[0], id);
         edges.emplace_back(edge);
     }
     void caculate_normal(){
@@ -86,8 +86,8 @@ struct Polygon{
 };
 
 struct ActiveEdge{
-    using PtrEdge = std::shared_ptr<Edge>;
-    using PtrPolygon = std::shared_ptr<Polygon>;
+    using PtrEdge = Edge*;
+    using PtrPolygon = Polygon*;
     double x_l, dx_l;
     double x_r, dx_r;
     int dy_l, dy_r;
@@ -97,7 +97,7 @@ struct ActiveEdge{
     PtrPolygon polygon;
     ActiveEdge(PtrEdge e1, PtrEdge e2, PtrPolygon & polygon){
         if(e1->x > e2->x || (e1->x == e2->x && e1->dx > e2->dx)){
-            swap(e1, e2);
+            std::swap(e1, e2);
         }
         std::tie(dx_l, dx_r, dy_l, dy_r, this->polygon) = std::make_tuple(e1->dx, e2->dx, e1->dy, e2->dy, polygon);
         //TODO: recaculate z_l

@@ -6,10 +6,10 @@
 #include <yaml-cpp/yaml.h>
 
 using namespace std;
-using PtrVertice = shared_ptr<Vertice>;
-using PtrPolygon = shared_ptr<Polygon>;
-using PtrEdge = shared_ptr<Edge>;
-using PtrActiveEdge = shared_ptr<ActiveEdge>;
+using PtrVertice = Vertice*;
+using PtrPolygon = Polygon*;
+using PtrEdge = Edge*;
+using PtrActiveEdge = ActiveEdge*;
 int Polygon::count = 0;
 cv::Scalar Edge::color = cv::Scalar(0, 255, 0);
 
@@ -53,7 +53,7 @@ void Model::quantize_vertices(){
     current_vertices.insert(current_vertices.end(), vertices.begin(), vertices.end());
     for(int i = 0; i < current_vertices.size(); i++){
         auto & point = vertices[i]->point;
-        current_vertices[i] = make_shared<Vertice>(point[0], point[1], point[2]);
+        current_vertices[i] = new Vertice(point[0], point[1], point[2]);
         std::tie(vertices[i]->point[0], vertices[i]->point[1]) = make_tuple(std::round(point[0]), std::round(point[1]));
     }
     std::swap(current_vertices, vertices);
@@ -77,7 +77,7 @@ void Model::parse_object_file(const char *object_file_path){
         else if(starts_with(buffer_a, "v")){
             double x, y, z;
             sscanf(buffer_a, "v %lf %lf %lf", &x, &y, &z);
-            PtrVertice ptr_vertice = make_shared<Vertice>(x, y, z);
+            PtrVertice ptr_vertice = new Vertice(x, y, z);
             vertices.push_back(ptr_vertice);
         }
         else if(starts_with(buffer_a, "f")){
@@ -104,7 +104,7 @@ void Model::parse_object_file(const char *object_file_path){
                 vn.push_back(vertices[v1 - 1]);
                 i = j + 1;
             }
-            PtrPolygon ptr_polygon = make_shared<Polygon>(std::move(vn));
+            PtrPolygon ptr_polygon = new Polygon(std::move(vn));
             polygons.push_back(ptr_polygon);
         }
     }
@@ -180,7 +180,7 @@ void Model::z_buffer_scanline(){
                 break;
             }
             if(edges_list[j]->id == edges_list[j+1]->id){
-                auto active_edge = make_shared<ActiveEdge>(edges_list[j], edges_list[j+1], polygons[edges_list[j]->id]);
+                auto active_edge = new ActiveEdge(edges_list[j], edges_list[j+1], polygons[edges_list[j]->id]);
                 active_edges_table.push_back(active_edge);
                 j++;
             }else{
