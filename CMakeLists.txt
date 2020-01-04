@@ -8,5 +8,5 @@ find_package(yaml-cpp REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIRS} ${YAML_CPP_INCLUDE_DIR})
 include_directories("${CMAKE_SOURCE_DIR}/include")
 
-add_executable(scanline src/main.cc)
+add_executable(scanline src/main.cc src/model.cc src/utility.cc)
 target_link_libraries(scanline ${OpenCV_LIBRARIES} ${YAML_CPP_LIBRARIES})
