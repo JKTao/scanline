@@ -1,15 +1,5 @@
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <opencv2/opencv.hpp>
 #include <string>
 #include <iostream>
-#include <vector>
-#include <tuple>
-#include <regex>
-#include <memory>
-#include <algorithm>
-#include <fstream>
-#include <cmath>
 #include "utility.hpp"
 #include "model.hpp"
 

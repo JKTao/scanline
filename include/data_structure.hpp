@@ -33,7 +33,7 @@ struct Edge{
     }
 };
 
-struct Triangle{
+struct Polygon{
     using PtrVertice = std::shared_ptr<Vertice>;
     using PtrEdge = std::shared_ptr<Edge>;
     static int count;
@@ -45,7 +45,7 @@ struct Triangle{
     // double max_y_, min_y_;
     int dy;
     double max_y, min_y;
-    std::tuple<int, int, int> caculate_triangle(){
+    std::tuple<int, int, int> caculate_polygon(){
         std::sort(begin(v), end(v), [](const PtrVertice & v1, const PtrVertice & v2){return v1->point[1] > v2->point[1];} );
         max_y = v[0]->point[1];
         min_y = v[2]->point[1];
@@ -70,26 +70,26 @@ struct Triangle{
         color = cv::Vec3b(color_, color_, color_);
         return std::make_tuple(v[0]->point[1], v[1]->point[1], v[2]->point[1], edge1, edge2, edge3);
     }
-    Triangle(PtrVertice v1, PtrVertice v2, PtrVertice v3):v{v1, v2, v3}, id(count++){
+    Polygon(PtrVertice v1, PtrVertice v2, PtrVertice v3):v{v1, v2, v3}, id(count++){
     }
 };
 
 struct ActiveEdge{
     using PtrEdge = std::shared_ptr<Edge>;
-    using PtrTriangle = std::shared_ptr<Triangle>;
+    using PtrPolygon = std::shared_ptr<Polygon>;
     double x_l, dx_l;
     double x_r, dx_r;
     int dy_l, dy_r;
 
     double z_l, dz_x, dz_y;
-    PtrTriangle triangle;
-    ActiveEdge(PtrEdge & e1, PtrEdge & e2, PtrTriangle & polygon){
+    PtrPolygon polygon;
+    ActiveEdge(PtrEdge & e1, PtrEdge & e2, PtrPolygon & polygon){
         PtrEdge e_l = e2, e_r = e1;
         if(e1->x + e1->dx < e1->x + e2->dx){
             e_l = e1;
             e_r = e2;
         }
-        std::tie(dx_l, dx_r, dy_l, dy_r, triangle) = std::make_tuple(e_l->dx, e_r->dx, e_l->dy, e_r->dy, polygon);
+        std::tie(dx_l, dx_r, dy_l, dy_r, this->polygon) = std::make_tuple(e_l->dx, e_r->dx, e_l->dy, e_r->dy, polygon);
         //TODO: recaculate z_l
         x_l = e_l->x;
         x_r = e_r->x;

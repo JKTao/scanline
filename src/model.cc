@@ -7,10 +7,10 @@
 
 using namespace std;
 using PtrVertice = shared_ptr<Vertice>;
-using PtrTriangle = shared_ptr<Triangle>;
+using PtrPolygon = shared_ptr<Polygon>;
 using PtrEdge = shared_ptr<Edge>;
 using PtrActiveEdge = shared_ptr<ActiveEdge>;
-int Triangle::count = 0;
+int Polygon::count = 0;
 cv::Scalar Edge::color = cv::Scalar(0, 255, 0);
 
 Model::Model(){}
@@ -76,8 +76,8 @@ void Model::parse_object_file(const char *object_file_path){
             sscanf(buffer1, "%d ", &v1);
             sscanf(buffer2, "%d ", &v2);
             sscanf(buffer3, "%d ", &v3);
-            PtrTriangle ptr_triangle = make_shared<Triangle>(vertices[v1 - 1], vertices[v2 - 1], vertices[v3 - 1]);
-            triangles.push_back(ptr_triangle);
+            PtrPolygon ptr_polygon = make_shared<Polygon>(vertices[v1 - 1], vertices[v2 - 1], vertices[v3 - 1]);
+            polygons.push_back(ptr_polygon);
         }
     }
 }
@@ -101,9 +101,9 @@ void Model::build_structure(){
 
     //Construct Polygon Table and Edge Table
     //TODO: remove some bad element;
-    for(auto & ptr_tr:triangles){
+    for(auto & ptr_tr:polygons){
         int max_y, min_y, dy;
-        tie(max_y, min_y, dy) = ptr_tr->caculate_triangle();
+        tie(max_y, min_y, dy) = ptr_tr->caculate_polygon();
         polygons_table[max_y].push_back(ptr_tr);
         int y1, y2, y3;
         PtrEdge edge1, edge2, edge3;
@@ -112,7 +112,7 @@ void Model::build_structure(){
 
     //check if model read successfully: Plot frame.
     cv::Mat img = cv::Mat::zeros(HEIGHT, WIDTH, CV_64FC3);
-    for(auto & ptr_tr:triangles){
+    for(auto & ptr_tr:polygons){
         ptr_tr->edge1->plot(img);
         ptr_tr->edge2->plot(img);
         ptr_tr->edge3->plot(img);
@@ -123,7 +123,6 @@ void Model::build_structure(){
 void Model::render_model(){
     build_structure();
     z_buffer_scanline();
-
 }
 
 void Model::z_buffer_scanline(){
@@ -146,7 +145,7 @@ void Model::z_buffer_scanline(){
         for(auto & active_edge:active_edges_table){
             double z = active_edge->z_l;
             // cout << "DEBUG: id " << active_edge->id << " " << active_edge->x_l << " " << active_edge->x_r << endl; 
-            cv::Vec3b color = active_edge->triangle->color;
+            cv::Vec3b color = active_edge->polygon->color;
             for(int x = active_edge->x_l; x <= active_edge->x_r; x++){
                 if(z <= z_buffer(i, x)){
                     z_buffer(i, x) = z;
@@ -167,18 +166,18 @@ void Model::z_buffer_scanline(){
 
         for(auto it = active_edges_table.begin(); it != active_edges_table.end();){
             auto &active_edge = *it;
-            auto &triangle = active_edge->triangle;
-            auto &edge3 = triangle->edge3;
+            auto &polygon = active_edge->polygon;
+            auto &edge3 = polygon->edge3;
 
             //firstly decrease dy of active polygon and active edge.
-            triangle->dy--;
+            polygon->dy--;
             active_edge->dy_l--;
             active_edge->dy_r--;
             active_edge->z_l += active_edge->dz_y + active_edge->dx_l * active_edge->dz_x;
             active_edge->x_l += active_edge->dx_l;
             active_edge->x_r += active_edge->dx_r;
             //see if active edge failed.
-            if(triangle->dy < 0){
+            if(polygon->dy < 0){
                 //remove this active edge and polygon
                 it = active_edges_table.erase(it);
                 continue;
