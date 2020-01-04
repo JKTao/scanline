@@ -24,9 +24,12 @@ int main(){
     cout << "Quantize model takes " << t_quantize.toc() << "ms" << endl;
 
     TicToc t_render;
-    model.render_model();
+    model.build_structure();
     cout << "Render models takes " << t_render.toc() << "ms" << endl;
 
 
+    TicToc t_buffer;
+    model.z_buffer_scanline();
+    cout << "Render models takes " << t_buffer.toc() << "ms" << endl;
     return 0;
 }

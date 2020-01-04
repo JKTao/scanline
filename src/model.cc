@@ -147,13 +147,13 @@ void Model::build_structure(){
     }
 
     //check if model read successfully: Plot frame.
-    cv::Mat img = cv::Mat::zeros(HEIGHT, WIDTH, CV_64FC3);
-    for(auto & lst:edges_table){
-        for(auto & edge:lst){
-            edge->plot(img);
-        }
-    }
-    cv::imwrite("/home/taokun/test.jpg", img);
+    // cv::Mat img = cv::Mat::zeros(HEIGHT, WIDTH, CV_64FC3);
+    // for(auto & lst:edges_table){
+    //     for(auto & edge:lst){
+    //         edge->plot(img);
+    //     }
+    // }
+    // cv::imwrite("/home/taokun/test.jpg", img);
 }
 
 void Model::render_model(){
