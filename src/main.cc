@@ -18,6 +18,10 @@ int main(){
     model.normalize_vertices();
     cout << "Transform model takes " << t_transform.toc() << "ms" << endl;
 
+    TicToc t_quantize;
+    model.quantize_vertices();
+    cout << "Transform model takes " << t_quantize.toc() << "ms" << endl;
+
     TicToc t_render;
     model.render_model();
     cout << "Render models takes " << t_render.toc() << "ms" << endl;
