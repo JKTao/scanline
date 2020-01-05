@@ -128,8 +128,6 @@ void Model::build_structure(){
     z_buffer = Eigen::MatrixXd::Ones(HEIGHT + 1, WIDTH) * 1e5;
     color_buffer = cv::Mat(HEIGHT + 1, WIDTH, CV_8UC3);
 
-    //Construct Polygon Table and Edge Table
-    //DONE: remove bad polygon and bad edges.
     for(auto & ptr_tr:polygons){
         if(abs(ptr_tr->c) < 1e-3){
             continue;
@@ -166,10 +164,6 @@ void Model::z_buffer_scanline(){
     for(int i = HEIGHT; i > 0; i--){
         auto & edges_list = edges_table[i];
         vector<PtrEdge> left_edges_list;
-        // if(i == 355){
-        //     cout << edges_table[i].size() << endl;
-        //     cout << edges_list.size() << endl;
-        // }
 
         //insert polygon from polygons_list into active polygon tables.
         //insert edge from polygon into active edge tables.
@@ -212,14 +206,6 @@ void Model::z_buffer_scanline(){
             }
         }
 
-        // if(i == 424){
-        //     ofstream log_intern("/home/taokun/intern.txt");
-        //     for(int j = 160; j <= 320; j++){
-        //         log_intern << z_buffer(i, j) << " ";
-        //     }
-        //     log_intern.close();
-        // }
-
         for(auto it = active_edges_table.begin(); it != active_edges_table.end();){
             auto &active_edge = *it;
             auto &polygon = active_edge->polygon;
@@ -251,12 +237,4 @@ void Model::z_buffer_scanline(){
     }
 
     cv::imwrite("/home/taokun/result.jpg", color_buffer);
-    // ofstream log_txt("/home/taokun/test.txt");
-    // for(int i = 0; i < HEIGHT; i++){
-    //     for(int j = 0; j < WIDTH; j++){
-    //         log_txt << (int)color_buffer.at<cv::Vec3b>(i, j)(1) << " ";
-    //     }
-    //     log_txt << "\n";
-    // }
-    // log_txt.close();
 }
