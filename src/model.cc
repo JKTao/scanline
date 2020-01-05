@@ -180,7 +180,69 @@ void Model::render_model(){
 }
 
 void Model::interval_scanline(){
+    cout << "Render with interval scanline method." << endl;
+    active_single_edges_table.clear();
+    for(int i = HEIGHT; i > 0; i++){
+        active_polygons_table.clear();
+        auto & edges_list = edges_table[i];
+        sort(edges_list.begin(), edges_list.end(), [](const PtrEdge & edge1, const PtrEdge & edge2){return edge1->x < edge2->x;});
+        int j;
+        //insert the sorted vector into list
+        insert_sorted_vector_into_active_edge_list(active_single_edges_table, edges_list);
+        if(active_single_edges_table.empty()){
+            continue;
+        }
+        for(auto it_current = active_single_edges_table.begin(); forward(it) != active_single_edges_table.end(); ++it){
+            insert_active_polygons_table(active_polygons_table, it_current);
+            double x_l, x_r, z_l, z_r;
+            auto it_next = forward(it);
+            std::tie(x_l, x_r) = std::make_tuple((*it)->x, (*(it_next))->x);
+            auto min_zl_element = min_element(active_polygons_table.begin(), active_polygons_table.end(), [x_l, i](const PtrPolygon & A, const PtrPolygon & B){return A->caculate_deep(x_l, i) < B->caculate_depth(x_l, i); });
+            auto min_zr_element = min_element(active_polygons_table.begin(), active_polygons_table.end(), [x_r, i](const PtrPolygon & A, const PtrPolygon & B){return A->caculate_deep(x_r, i) < B->caculate_depth(x_l, i); });
+            std::tie(id1, id2) = std::make_tuple((*min_zl_element)->id, (*max_zr_element)->id);
+            if(id1 == id2){
+                // No through
+                cv::line(color_buffer, (x_l, i), (x_r, i), polygons[id1]->color);
+            }else{
+                //find the intersection point;
+                auto x_m = polygons[id1]->caculate_intersection(polygons[id2], x_l, x_r, i);
+                cv::line(color_buffer, (x_l, i), (x_m, i), polygons[id1]->color);
+                cv::line(color_buffer, (x_m, i), (x_r, i), polygons[id2]->color);
+            }
+        }
 
+        for(auto it = active_single_edges_table.begin(); it != active_single_edges_table.end(); ){
+            auto & edge = (*it);
+            edge->dy--;
+            edge->x += edge->dx;
+            it = (edge->dy < 0)? active_single_edges_table.erase(it):forward(it);
+        }
+    }
+}
+void Model::insert_active_polygons_table(list<Polygon> & active_polygons_table, PtrActiveEdge edge){
+    int id = edge->polygon->id;
+    auto it = find_if(active_polygons_table.begin(), active_polygons_table.end(), [id](const Polygon & polygon){return polygon.id == id;});
+    if(it == active_polygons_table.end()){
+        active_polygons_table.push_back(it);
+    }else{
+        active_polygons_table.erase(it);
+    }
+}
+
+void insert_sorted_vector_into_active_edge_list(list<PtrActiveEdge> & active_single_edges_table, vector<PtrEdge> & edges_list){
+    auto active_it = active_single_edges_table.begin();
+    for(j = 0; j < edges_list.size(); j++){
+        // if(edges_list.size() < 1){
+        //     break;
+        // }
+        for(; active_it != active_single_edges_table.end(); active_it++){
+            if((*active_it)->x > edges_list[j]->x){
+                break;
+            }
+        }
+        auto ptr_active_single_edge = new ActiveSingleEdge(edges_list[j], polygons[edges_list[j]->id]);
+        active_single_edges_table.insert(active_it, ptr_active_single_edge);
+    }
 }
 
 void Model::z_buffer_scanline(){
@@ -214,12 +276,8 @@ void Model::z_buffer_scanline(){
         //plot here
         for(auto & active_edge:active_edges_table){
             double z = active_edge->z_l;
-            // cout << "DEBUG: id " << active_edge->id << " " << active_edge->x_l << " " << active_edge->x_r << endl; 
             cv::Vec3b color = active_edge->polygon->color;
-            if(active_edge->polygon->id == 2){
-                // cout << active_edge->x_l << active_edge->x_r << endl;
-            }
-            int x_l = std::round(active_edge->x_l), x_r = std::round(active_edge->x_r);
+            // int x_l = std::round(active_edge->x_l), x_r = std::round(active_edge->x_r);
             // if(x_l > x_r){
             //     cout << "BAD POINT" << x_l << " " << x_r << " " << active_edge->dx_l << " " <<  active_edge->dx_r << " " << active_edge->polygon->id << " " << i <<  endl;
             // }
@@ -227,7 +285,6 @@ void Model::z_buffer_scanline(){
                 if(z <= z_buffer(i, x)){
                     z_buffer(i, x) = z;
                     color_buffer.at<cv::Vec3b>(i, x) = color;
-                    //assign color.
                 }
                 z += active_edge->dz_x;
             }

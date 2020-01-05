@@ -11,6 +11,7 @@ struct Model{
     using PtrPolygon = Polygon*;
     using PtrEdge = Edge*;
     using PtrActiveEdge = ActiveEdge*;
+    using PtrActiveSingleEdge = ActiveSingleEdge*;
 
     std::vector<PtrVertice> vertices;
     std::vector<PtrVertice> backup_vertices;
@@ -23,6 +24,7 @@ struct Model{
     std::vector<std::vector<PtrPolygon>> polygons_table;
     std::vector<std::vector<PtrEdge>> edges_table;
     std::list<PtrActiveEdge> active_edges_table;
+    std::list<PtrActiveSingleEdge> active_single_edges_table;
     std::list<PtrPolygon> active_polygons_table;
     cv::Mat color_buffer;
     Eigen::MatrixXd z_buffer;

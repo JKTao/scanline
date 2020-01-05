@@ -81,6 +81,15 @@ struct Polygon{
         color = cv::Vec3b(color_, color_, color_);
     }
 
+    double caculate_intersection(PtrPolygon polygon, double x_l, double x_r, double y){
+        Eigen::Matrix2d A(a, c, polygon->a, polygon->c);
+        Eigen::Vector2d B(b * y + d, polygon->b * y + polygon->d);
+        auto intersection = -A.inverse() * B
+        return intersection[0];
+    }
+    double caculate_depth(double x, double y){
+        return -(a * x + b * y + d)/c;
+    }
     Polygon(std::vector<PtrVertice> vn):id(count++){
         this->vn = vn;
     }
@@ -111,3 +120,24 @@ struct ActiveEdge{
         z_l = -(polygon->a * x_l + polygon->b * y + polygon->d) / polygon->c;
     }
 }; 
+
+struct ActiveSingleEdge{
+    using PtrEdge = Edge*;
+    using PtrPolygon = Polygon*;
+    double x;
+    int y;
+    double dx;
+    int dy;
+    double dz_x;
+    double dz_y;
+    double z;
+    PtrPolygon polygon;
+    ActiveSingleEdge(PtrEdge e1, PtrPolygon & polygon){
+        std::tie(dx, x, dy, polygon, y) = std::make_tuple(e1->dx, e1->x, e1->dy, polygon, e1->y);
+        //TODO: recaculate z_l
+        dz_x = -polygon->a / polygon->c;
+        dz_y = polygon->b / polygon->c;
+        z= -(polygon->a * x+ polygon->b * y + polygon->d) / polygon->c;
+    }
+
+};
