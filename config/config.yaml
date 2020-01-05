@@ -1,4 +1,5 @@
 object_path: "../model/venus.obj"
 width: 800
 height: 600
+render_mode: 1
 rotation_vector: [3.14, 0, 0] #original state should stay [3.14, 0, 0]

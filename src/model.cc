@@ -127,12 +127,12 @@ void Model::read_configure(const string & configure_file_path){
     object_file_path = config["object_path"].as<string>();
     WIDTH = config["width"].as<int>();
     HEIGHT = config["height"].as<int>();
+    mode = config["render_mode"].as<int>();
     YAML::Node rotation_vector = config["rotation_vector"];
     for(int i = 0; i < rotation_vector.size(); i++){
         this->rotation_vector[i] = rotation_vector[i].as<double>();
     }
 }
-
 
 void Model::build_structure(){
     polygons_table.clear();
@@ -170,11 +170,21 @@ void Model::build_structure(){
 }
 
 void Model::render_model(){
-    build_structure();
-    z_buffer_scanline();
+    if(mode == 1){
+        z_buffer_scanline();
+    }else if(mode == 0){
+        interval_scanline();
+    }else{
+        cerr << "Invalid mode number " << mode << endl;
+    }
+}
+
+void Model::interval_scanline(){
+
 }
 
 void Model::z_buffer_scanline(){
+    cout << "Render with z buffer scanline method." << endl;
     active_edges_table.clear();
     active_polygons_table.clear();
     //Construct Active Polygon Table, and plot Active Edge Table

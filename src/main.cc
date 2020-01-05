@@ -11,7 +11,7 @@ using namespace std;
 
 
 int main(){
-    cout << "Please modify config file to choose model file." << endl;
+    cout << "Please modify config file to choose model file and render method." << endl;
     cout << "Its default path is ../config/config.yaml." << endl;
     string config_path = "../config/config.yaml";
     set<int> valid_key = {'A', 'D', 'W', 'S', 'J', 'K', 'Q'};
@@ -24,7 +24,6 @@ int main(){
         {'K', {0, -0.05, 0}},
     };
     TicToc t_parse;
-    int method;
     Model model(config_path);
     cout << "Parse object file takes " << t_parse.toc() << "ms" << endl;
     cout << "There are " << model.polygons.size() << " faces"<< endl;
@@ -34,9 +33,9 @@ int main(){
     model.normalize_vertices(model.rotation_vector);
     cout << "Normalize model takes " << t_transform.toc() << "ms" << endl;
     cout << "---------------------------------------------------" << endl;
-    cout << "Please choose render method. [0]interval scanline, [1]z_buffer scanline" << endl;
-    int c = getchar();
-    method = 'c' - '0';
+    // cout << "Please choose render method. [0]interval scanline, [1]z_buffer scanline" << endl;
+    // int c = getchar();
+    // method = c - '0';
     while(1){
         TicToc t_quantize;
         model.quantize_vertices();
@@ -47,9 +46,9 @@ int main(){
         cout << "Build structure takes " << t_build.toc() << "ms" << endl;
 
 
-        TicToc t_scanline;
-        model.z_buffer_scanline();
-        cout << "Render models takes " << t_scanline.toc() << "ms" << endl;
+        TicToc t_render;
+        model.render_model();
+        cout << "Render models takes " << t_render.toc() << "ms" << endl;
         
         model.show();
         int key = cv::waitKey();

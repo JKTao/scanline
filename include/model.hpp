@@ -26,6 +26,7 @@ struct Model{
     std::list<PtrPolygon> active_polygons_table;
     cv::Mat color_buffer;
     Eigen::MatrixXd z_buffer;
+    int mode;
 
 
     Model();
@@ -38,6 +39,7 @@ struct Model{
 
     void transform_vertices(Eigen::Vector3d w = Eigen::Vector3d(0, 0, 0));
     void z_buffer_scanline();
+    void interval_scanline();
     void render_model();
     void build_structure();
     void show();
