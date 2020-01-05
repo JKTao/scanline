@@ -13,7 +13,7 @@ struct Model{
     using PtrActiveEdge = ActiveEdge*;
 
     std::vector<PtrVertice> vertices;
-    std::vector<PtrVertice> current_vertices;
+    std::vector<PtrVertice> backup_vertices;
     std::vector<PtrPolygon> polygons;
     int WIDTH, HEIGHT;
     Eigen::Vector3d rotation_vector;

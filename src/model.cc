@@ -1,5 +1,6 @@
 #include "model.hpp"
 #include "utility.hpp"
+#include "cstdio"
 #include <algorithm>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -45,25 +46,30 @@ void Model::normalize_vertices(Eigen::Vector3d w){
     Eigen::Vector3d bias(WIDTH/2, HEIGHT/2, -100);
     // cout << "center " << center << endl;
     // cout << R << endl;
+    //Backup vertices
     for_each(vertices.begin(), vertices.end(), [R, S, center, bias](PtrVertice & vertice){vertice->point =  R * S * (vertice->point - center) + bias; });
-    for_each(polygons.begin(), polygons.end(), [](PtrPolygon & polygon){polygon->caculate_normal();});
+    backup_vertices.insert(backup_vertices.end(), vertices.begin(), vertices.end());
+    for(int i = 0; i < backup_vertices.size(); i++){
+        auto & point = vertices[i]->point;
+        backup_vertices[i] = new Vertice(point[0], point[1], point[2]);
+    }
 }
 
 void Model::quantize_vertices(){
-    current_vertices.insert(current_vertices.end(), vertices.begin(), vertices.end());
-    for(int i = 0; i < current_vertices.size(); i++){
+    for_each(polygons.begin(), polygons.end(), [](PtrPolygon & polygon){polygon->caculate_normal();});
+    for(int i = 0; i < vertices.size(); i++){
         auto & point = vertices[i]->point;
-        current_vertices[i] = new Vertice(point[0], point[1], point[2]);
         std::tie(vertices[i]->point[0], vertices[i]->point[1]) = make_tuple(std::round(point[0]), std::round(point[1]));
     }
-    std::swap(current_vertices, vertices);
 }
 
 void Model::transform_vertices(Eigen::Vector3d w){
     Eigen::AngleAxis rotation_vector(w.norm(), w.normalized());
     Eigen::Matrix3d R = rotation_vector.toRotationMatrix();
     Eigen::Vector3d bias(WIDTH/2, HEIGHT/2, -100);
-    for_each(vertices.begin(), vertices.end(), [R, bias](PtrVertice & vertice){vertice->point = R * (vertice->point - bias) + bias; });
+    for(int i = 0; i < vertices.size(); i++){
+        vertices[i]->point = R * (backup_vertices[i]->point - bias) + bias;
+    }
 }
 
 void Model::parse_object_file(const char *object_file_path){
