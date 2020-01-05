@@ -18,6 +18,7 @@ Model::Model(){}
 Model::Model(const string & configure){
     read_configure(configure);
     parse_object_file(object_file_path.c_str());
+    rotation_matrix = Eigen::Matrix3d::Identity(3, 3);
 }
 void Model::normalize_vertices(Eigen::Vector3d w){
     auto [min_x_element, max_x_element] = minmax_element(vertices.begin(), vertices.end(), [](const PtrVertice & v1, PtrVertice &v2){return v1->point[0] < v2->point[0];});
@@ -67,13 +68,18 @@ void Model::transform_vertices(Eigen::Vector3d w){
     Eigen::AngleAxis rotation_vector(w.norm(), w.normalized());
     Eigen::Matrix3d R = rotation_vector.toRotationMatrix();
     Eigen::Vector3d bias(WIDTH/2, HEIGHT/2, -100);
+    rotation_matrix = R * rotation_matrix;
+    cout << "Rotation Matrix " << R << endl;
     for(int i = 0; i < vertices.size(); i++){
-        vertices[i]->point = R * (backup_vertices[i]->point - bias) + bias;
+        vertices[i]->point = rotation_matrix * (backup_vertices[i]->point - bias) + bias;
     }
 }
 
 void Model::parse_object_file(const char *object_file_path){
     FILE *object_file = fopen(object_file_path, "r");
+    if(object_file == NULL){
+        cerr << "Unable to open object file. " << object_file_path << endl;
+    }
     char buffer_a[1000], buffer_b[1000];
     char buffer1[100], buffer2[100], buffer3[100];
     while(fscanf(object_file, "%[^\n]\n", buffer_a) != -1){
@@ -129,10 +135,13 @@ void Model::read_configure(const string & configure_file_path){
 
 
 void Model::build_structure(){
+    polygons_table.clear();
+    edges_table.clear();
     polygons_table.resize(HEIGHT + 1);
     edges_table.resize(HEIGHT + 1);
+
     z_buffer = Eigen::MatrixXd::Ones(HEIGHT + 1, WIDTH) * 1e5;
-    color_buffer = cv::Mat(HEIGHT + 1, WIDTH, CV_8UC3);
+    color_buffer = cv::Mat::zeros(HEIGHT + 1, WIDTH, CV_8UC3);
 
     for(auto & ptr_tr:polygons){
         if(abs(ptr_tr->c) < 1e-3){
@@ -151,13 +160,13 @@ void Model::build_structure(){
     }
 
     // check if model read successfully: Plot frame.
-    cv::Mat img = cv::Mat::zeros(HEIGHT, WIDTH, CV_64FC3);
-    for(auto & lst:edges_table){
-        for(auto & edge:lst){
-            edge->plot(img);
-        }
-    }
-    cv::imwrite("/home/taokun/test.jpg", img);
+    // cv::Mat img = cv::Mat::zeros(HEIGHT, WIDTH, CV_64FC3);
+    // for(auto & lst:edges_table){
+    //     for(auto & edge:lst){
+    //         edge->plot(img);
+    //     }
+    // }
+    // cv::imwrite("/home/taokun/test.jpg", img);
 }
 
 void Model::render_model(){
@@ -166,6 +175,8 @@ void Model::render_model(){
 }
 
 void Model::z_buffer_scanline(){
+    active_edges_table.clear();
+    active_polygons_table.clear();
     //Construct Active Polygon Table, and plot Active Edge Table
     for(int i = HEIGHT; i > 0; i--){
         auto & edges_list = edges_table[i];
@@ -243,4 +254,8 @@ void Model::z_buffer_scanline(){
     }
 
     cv::imwrite("/home/taokun/result.jpg", color_buffer);
+}
+
+void Model::show(){
+    cv::imshow("Image", color_buffer);
 }

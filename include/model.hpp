@@ -16,6 +16,7 @@ struct Model{
     std::vector<PtrVertice> backup_vertices;
     std::vector<PtrPolygon> polygons;
     int WIDTH, HEIGHT;
+    Eigen::Matrix3d rotation_matrix;
     Eigen::Vector3d rotation_vector;
     std::string object_file_path;
 
@@ -25,6 +26,7 @@ struct Model{
     std::list<PtrPolygon> active_polygons_table;
     cv::Mat color_buffer;
     Eigen::MatrixXd z_buffer;
+
 
     Model();
     Model(const std::string & configure_file_path);
@@ -38,4 +40,5 @@ struct Model{
     void z_buffer_scanline();
     void render_model();
     void build_structure();
+    void show();
 };
