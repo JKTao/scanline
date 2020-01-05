@@ -45,6 +45,7 @@ struct Edge{
 struct Polygon{
     using PtrVertice = Vertice*;
     using PtrEdge = Edge*;
+    using PtrPolygon = Polygon*;
     static int count;
     std::vector<PtrVertice> vn;
     std::vector<PtrEdge> edges;
@@ -82,9 +83,10 @@ struct Polygon{
     }
 
     double caculate_intersection(PtrPolygon polygon, double x_l, double x_r, double y){
-        Eigen::Matrix2d A(a, c, polygon->a, polygon->c);
+        Eigen::Matrix2d A;
+        A << a, c, polygon->a, polygon->c;
         Eigen::Vector2d B(b * y + d, polygon->b * y + polygon->d);
-        auto intersection = -A.inverse() * B
+        auto intersection = -A.inverse() * B;
         return intersection[0];
     }
     double caculate_depth(double x, double y){

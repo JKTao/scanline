@@ -43,6 +43,8 @@ struct Model{
     void z_buffer_scanline();
     void interval_scanline();
     void render_model();
+    void insert_sorted_vector_into_active_edge_list(std::list<PtrActiveSingleEdge> & active_single_edges_table, std::vector<PtrEdge> & edges_list);
+    void insert_active_polygons_table(std::list<PtrPolygon> & active_polygons_table, PtrActiveSingleEdge edge);
     void build_structure();
     void show();
 };
