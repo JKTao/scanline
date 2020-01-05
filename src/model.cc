@@ -144,14 +144,14 @@ void Model::build_structure(){
         }
     }
 
-    //check if model read successfully: Plot frame.
-    // cv::Mat img = cv::Mat::zeros(HEIGHT, WIDTH, CV_64FC3);
-    // for(auto & lst:edges_table){
-    //     for(auto & edge:lst){
-    //         edge->plot(img);
-    //     }
-    // }
-    // cv::imwrite("/home/taokun/test.jpg", img);
+    // check if model read successfully: Plot frame.
+    cv::Mat img = cv::Mat::zeros(HEIGHT, WIDTH, CV_64FC3);
+    for(auto & lst:edges_table){
+        for(auto & edge:lst){
+            edge->plot(img);
+        }
+    }
+    cv::imwrite("/home/taokun/test.jpg", img);
 }
 
 void Model::render_model(){
@@ -193,9 +193,9 @@ void Model::z_buffer_scanline(){
                 // cout << active_edge->x_l << active_edge->x_r << endl;
             }
             int x_l = std::round(active_edge->x_l), x_r = std::round(active_edge->x_r);
-            if(x_l > x_r){
-                cout << "FUCK YOU " << x_l << " " << x_r << " " << active_edge->dx_l << " " <<  active_edge->dx_r << " " << active_edge->polygon->id << " " << i <<  endl;
-            }
+            // if(x_l > x_r){
+            //     cout << "BAD POINT" << x_l << " " << x_r << " " << active_edge->dx_l << " " <<  active_edge->dx_r << " " << active_edge->polygon->id << " " << i <<  endl;
+            // }
             for(int x = active_edge->x_l; x <= active_edge->x_r; x++){
                 if(z <= z_buffer(i, x)){
                     z_buffer(i, x) = z;
@@ -226,11 +226,11 @@ void Model::z_buffer_scanline(){
             if(active_edge->dy_r < 0){
                 auto edge_element = find_if(left_edges_list.begin(), left_edges_list.end(), [active_edge](const PtrEdge & A){return A->id == active_edge->polygon->id;});
                 PtrEdge edge = *edge_element;
-                tie(active_edge->x_r, active_edge->dx_r, active_edge->dy_r) = make_tuple(edge->x + edge->dx, edge->dx, edge->dy);
+                tie(active_edge->x_r, active_edge->dx_r, active_edge->dy_r) = make_tuple(edge->x + edge->dx, edge->dx, edge->dy - 1);
             }else if(active_edge->dy_l < 0){
                 auto edge_element = find_if(left_edges_list.begin(), left_edges_list.end(), [active_edge](const PtrEdge & A){return A->id == active_edge->polygon->id;});
                 PtrEdge edge = *edge_element;
-                tie(active_edge->x_l, active_edge->dx_l, active_edge->dy_l) = make_tuple(edge->x + edge->dx, edge->dx, edge->dy);
+                tie(active_edge->x_l, active_edge->dx_l, active_edge->dy_l) = make_tuple(edge->x + edge->dx, edge->dx, edge->dy - 1);
             }
             it++;
         }
