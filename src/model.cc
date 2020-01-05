@@ -263,7 +263,7 @@ void Model::z_buffer_scanline(){
         }
     }
 
-    cv::imwrite("/home/taokun/result.jpg", color_buffer);
+    //cv::imwrite("/home/taokun/result.jpg", color_buffer);
 }
 
 void Model::show(){
