@@ -87,7 +87,7 @@ struct Polygon{
         double theta = acos(abs(normal[2]));
         int color_ = int(color_scale * theta + 254 - color_base);
         color = cv::Vec3b(color_, color_, color_);
-        std::cout << "POLYGON " << id << " " << a << " " << b << " " << c << " " << d << std::endl;
+        // std::cout << "POLYGON " << id << " " << a << " " << b << " " << c << " " << d << std::endl;
     }
 
     double caculate_intersection(PtrPolygon polygon, double x_l, double x_r, double y){
