@@ -64,6 +64,7 @@ struct Polygon{
     }
     void caculate_edge(){
         //TODO: What if the edge is parallel to x axis?
+        //TODO: support for interval scanline.
         int i;
         edges.clear();
         for(i = 0; i < vn.size() - 1; i++){

@@ -146,7 +146,7 @@ void Model::build_structure(){
     color_buffer = cv::Mat::zeros(HEIGHT + 1, WIDTH, CV_8UC3);
 
     for(auto & ptr_tr:polygons){
-        if(abs(ptr_tr->c) < 1e-3){
+        if(abs(ptr_tr->c) < 1e-2){
             continue;
         }
         int max_y, min_y, dy;
@@ -195,13 +195,14 @@ void Model::interval_scanline(){
         if(active_single_edges_table.empty()){
             continue;
         }
+        cout << i << endl;
         for(auto it_current = active_single_edges_table.begin(), it_next = next(it_current); it_next != active_single_edges_table.end();it_current = it_next, it_next = next(it_next) ){
             insert_active_polygons_table(active_polygons_table, *it_current);
-            // cout << (*it_current)->polygon << "TABLE ";
-            // for(auto &polygon: active_polygons_table){
-            //     cout << polygon << " ";
-            // }
-            // cout << endl;
+            cout << (*it_current)->polygon << "TABLE ";
+            for(auto &polygon: active_polygons_table){
+                cout << polygon << " ";
+            }
+            cout << endl;
 
             if(active_polygons_table.empty()){
                 continue;
@@ -333,9 +334,9 @@ void Model::z_buffer_scanline(){
         }
     }
 
-    //cv::imwrite("/home/taokun/result.jpg", color_buffer);
 }
 
 void Model::show(){
+    cv::imwrite("/home/taokun/result.jpg", color_buffer);
     cv::imshow("Image", color_buffer);
 }
