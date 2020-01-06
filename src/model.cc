@@ -69,7 +69,7 @@ void Model::transform_vertices(Eigen::Vector3d w){
     Eigen::Matrix3d R = rotation_vector.toRotationMatrix();
     Eigen::Vector3d bias(WIDTH/2, HEIGHT/2, -100);
     rotation_matrix = R * rotation_matrix;
-    cout << "Rotation Matrix " << R << endl;
+    cout << "Rotation Matrix:\n " << rotation_matrix << endl;
     for(int i = 0; i < vertices.size(); i++){
         vertices[i]->point = rotation_matrix * (backup_vertices[i]->point - bias) + bias;
     }
@@ -79,6 +79,7 @@ void Model::parse_object_file(const char *object_file_path){
     FILE *object_file = fopen(object_file_path, "r");
     if(object_file == NULL){
         cerr << "Unable to open object file. " << object_file_path << endl;
+        exit(1);
     }
     char buffer_a[1000], buffer_b[1000];
     char buffer1[100], buffer2[100], buffer3[100];
@@ -161,13 +162,13 @@ void Model::build_structure(){
     }
 
     // check if model read successfully: Plot frame.
-    // cv::Mat img = cv::Mat::zeros(HEIGHT, WIDTH, CV_64FC3);
-    // for(auto & lst:edges_table){
-    //     for(auto & edge:lst){
-    //         edge->plot(img);
-    //     }
-    // }
-    // cv::imwrite("/home/taokun/test.jpg", img);
+    cv::Mat img = cv::Mat::zeros(HEIGHT, WIDTH, CV_64FC3);
+    for(auto & lst:edges_table){
+        for(auto & edge:lst){
+            edge->plot(img);
+        }
+    }
+    cv::imwrite("/home/taokun/test.jpg", img);
 }
 
 void Model::render_model(){
@@ -177,6 +178,7 @@ void Model::render_model(){
         interval_scanline();
     }else{
         cerr << "Invalid mode number " << mode << endl;
+        exit(1);
     }
 }
 
@@ -193,8 +195,17 @@ void Model::interval_scanline(){
         if(active_single_edges_table.empty()){
             continue;
         }
-        for(auto it_current = active_single_edges_table.begin(), it_next = next(it_current); it_next != active_single_edges_table.end();){
+        for(auto it_current = active_single_edges_table.begin(), it_next = next(it_current); it_next != active_single_edges_table.end();it_current = it_next, it_next = next(it_next) ){
             insert_active_polygons_table(active_polygons_table, *it_current);
+            // cout << (*it_current)->polygon << "TABLE ";
+            // for(auto &polygon: active_polygons_table){
+            //     cout << polygon << " ";
+            // }
+            // cout << endl;
+
+            if(active_polygons_table.empty()){
+                continue;
+            }
             double x_l, x_r, z_l, z_r;
             int id1, id2;
             std::tie(x_l, x_r) = std::make_tuple((*it_current)->x, (*(it_next))->x);
@@ -210,8 +221,7 @@ void Model::interval_scanline(){
                 cv::line(color_buffer, {(int)std::round(x_l), i}, {(int)std::round(x_m), i}, polygons[id1]->color);
                 cv::line(color_buffer, {(int)std::round(x_m), i}, {(int)std::round(x_r), i}, polygons[id1]->color);
             }
-            it_current = it_next;
-            it_next = next(it_next);
+
         }
 
         for(auto it = active_single_edges_table.begin(); it != active_single_edges_table.end(); ){

@@ -135,7 +135,7 @@ struct ActiveSingleEdge{
     double z;
     PtrPolygon polygon;
     ActiveSingleEdge(PtrEdge e1, PtrPolygon & polygon){
-        std::tie(dx, x, dy, polygon, y) = std::make_tuple(e1->dx, e1->x, e1->dy, polygon, e1->y);
+        std::tie(dx, x, dy, this->polygon, y) = std::make_tuple(e1->dx, e1->x, e1->dy, polygon, e1->y);
         //TODO: recaculate z_l
         dz_x = -polygon->a / polygon->c;
         dz_y = polygon->b / polygon->c;
