@@ -303,6 +303,7 @@ void Model::z_buffer_scanline(){
         if(j < edges_list.size()){
             left_edges_list.push_back(edges_list[j]);
         }
+
         //plot here
         for(auto & active_edge:active_edges_table){
             double z = active_edge->z_l;

@@ -22,6 +22,7 @@ struct Edge{
     int dy;
     int id;
     bool flag = true;
+    bool extrem_process = false;
     PtrVertice v1, v2;
     Edge(PtrVertice v1_, PtrVertice v2_, int id):v1(v1_), v2(v2_), id(id){
         if(v1->point[1] < v2->point[1]){
@@ -75,7 +76,7 @@ struct Polygon{
         for(int i = 0; i < number_vertices; i++){
             auto edge = new Edge(vn[i], vn[(i+1) % number_vertices], id);
             if(edge->v2->is_not_extrem){
-                edge->dy--;
+                edge->extrem_process = true;
             }
             edges.emplace_back(edge);
         }
@@ -147,11 +148,12 @@ struct ActiveSingleEdge{
     double z;
     PtrPolygon polygon;
     ActiveSingleEdge(PtrEdge e1, PtrPolygon & polygon){
-        std::tie(dx, x, dy, this->polygon, y) = std::make_tuple(e1->dx, e1->x, e1->dy, polygon, e1->y);
+        std::tie(dx, x, this->polygon, y) = std::make_tuple(e1->dx, e1->x, polygon, e1->y);
+        dy = (e1->extrem_process)?(e1->dy - 1):e1->dy;
         //TODO: recaculate z_l
         dz_x = -polygon->a / polygon->c;
         dz_y = polygon->b / polygon->c;
-        z= -(polygon->a * x+ polygon->b * y + polygon->d) / polygon->c;
+        z = -(polygon->a * x+ polygon->b * y + polygon->d) / polygon->c;
     }
 
 };
