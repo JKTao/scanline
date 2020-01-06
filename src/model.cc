@@ -191,6 +191,7 @@ void Model::interval_scanline(){
     for(int i = HEIGHT; i > 0; i--){
         active_polygons_table.clear();
         auto & edges_list = edges_table[i];
+        active_single_edges_table.sort([](const PtrActiveSingleEdge & edge1, const PtrActiveSingleEdge & edge2){return edge1->x < edge2->x;});
         sort(edges_list.begin(), edges_list.end(), [](const PtrEdge & edge1, const PtrEdge & edge2){return edge1->x < edge2->x;});
         int j;
         //insert the sorted vector into list
@@ -213,8 +214,8 @@ void Model::interval_scanline(){
             double x_l, x_r, z_l, z_r;
             int id1, id2;
             std::tie(x_l, x_r) = std::make_tuple((*it_current)->x, (*(it_next))->x);
-            if(1 == 1){
-                cout << "SPECIAL DEBUG: " << x_l << " " << x_r << endl;
+            if(i >= 170 && i <= 180){
+                cout << "SPECIAL DEBUG: " << i << " " << x_l << " " << x_r << endl;
 
                 for(auto it = active_polygons_table.begin(); it != active_polygons_table.end(); it++){
                     cout << (*it)->id << ": " << (*it)->caculate_depth(x_l, i) << " " <<  (*it)->caculate_depth(x_r, i) << endl; 
@@ -225,15 +226,15 @@ void Model::interval_scanline(){
             std::tie(id1, id2) = std::make_tuple((*min_zl_element)->id, (*min_zr_element)->id);
             if(id1 == id2){
                 // No through
-                cv::line(color_buffer, {(int)std::round(x_l), i}, {(int)std::round(x_r), i}, polygons[id1]->color);
+                cv::line(color_buffer, {(int)std::round(x_l), i}, {(int)std::round(x_r), i}, polygons[id1]->color, 1);
             }else{
                 //find the intersection point;
                 auto x_m = polygons[id1]->caculate_intersection(polygons[id2], x_l, x_r, i);
                 if(1 == 1){
                     cout << "INTERSECTION " << i << " " << x_l << " " << x_m << " " << x_r << endl;
                 }
-                cv::line(color_buffer, {(int)std::round(x_l), i}, {(int)std::round(x_m), i}, polygons[id1]->color);
-                cv::line(color_buffer, {(int)std::round(x_m), i}, {(int)std::round(x_r), i}, polygons[id2]->color);
+                cv::line(color_buffer, {(int)std::round(x_l), i}, {(int)std::round(x_m), i}, polygons[id1]->color, 1);
+                cv::line(color_buffer, {(int)std::round(x_m), i}, {(int)std::round(x_r), i}, polygons[id2]->color, 1);
             }
 
         }
@@ -242,6 +243,7 @@ void Model::interval_scanline(){
             auto & edge = (*it);
             edge->dy--;
             edge->x += edge->dx;
+            edge->z += edge->dz_y + edge->dx * edge->dz_x;
             it = (edge->dy < 0)? active_single_edges_table.erase(it):next(it);
         }
     }

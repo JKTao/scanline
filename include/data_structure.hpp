@@ -87,6 +87,7 @@ struct Polygon{
         double theta = acos(abs(normal[2]));
         int color_ = int(color_scale * theta + 254 - color_base);
         color = cv::Vec3b(color_, color_, color_);
+        std::cout << "POLYGON " << id << " " << a << " " << b << " " << c << " " << d << std::endl;
     }
 
     double caculate_intersection(PtrPolygon polygon, double x_l, double x_r, double y){
@@ -94,10 +95,13 @@ struct Polygon{
         A << a, c, polygon->a, polygon->c;
         Eigen::Vector2d B(b * y + d, polygon->b * y + polygon->d);
         auto intersection = -A.inverse() * B;
-        return intersection[0];
+        if(intersection[0] >= x_l && x_r >= intersection[0]){
+            return intersection[0];
+        }
+        return (x_l + x_r)/2;
     }
     double caculate_depth(double x, double y){
-        double depth = -(a * x + b * y + d)/c;
+        double depth = -(a/c * x + b/c * y + d/c);
         return depth;
     }
     Polygon(std::vector<PtrVertice> vn):id(count++){
