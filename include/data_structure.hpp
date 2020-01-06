@@ -9,7 +9,7 @@ const double color_base = 180;
 const double color_scale = color_base/3.14159;
 struct Vertice{
     Eigen::Vector3d point;
-    int index;
+    bool is_not_extrem;
     Vertice(double x, double y, double z):point(x, y, z){}
 };
 
@@ -65,14 +65,20 @@ struct Polygon{
     void caculate_edge(){
         //TODO: What if the edge is parallel to x axis?
         //TODO: support for interval scanline.
-        int i;
         edges.clear();
-        for(i = 0; i < vn.size() - 1; i++){
-            auto edge = new Edge(vn[i], vn[i+1], id);
+        int number_vertices = vn.size();
+        for(int i = 0; i < number_vertices; i++){
+            double y1, y2, y3;
+            std::tie(y1, y2, y3) = std::make_tuple(vn[(i+number_vertices-1)%number_vertices]->point[1], vn[i]->point[1], vn[(i+1)%number_vertices]->point[1]);
+            vn[i]->is_not_extrem = ((y2 - y1) < 0) ^ ((y2 - y3) < 0);
+        }
+        for(int i = 0; i < number_vertices; i++){
+            auto edge = new Edge(vn[i], vn[(i+1) % number_vertices], id);
+            if(edge->v2->is_not_extrem){
+                edge->dy--;
+            }
             edges.emplace_back(edge);
         }
-        auto edge = new Edge(vn[i], vn[0], id);
-        edges.emplace_back(edge);
     }
     void caculate_normal(){
         Eigen::Vector3d e1 = vn[0]->point - vn[1]->point, e2 = vn[1]->point - vn[2]->point;
@@ -91,7 +97,8 @@ struct Polygon{
         return intersection[0];
     }
     double caculate_depth(double x, double y){
-        return -(a * x + b * y + d)/c;
+        double depth = -(a * x + b * y + d)/c;
+        return depth;
     }
     Polygon(std::vector<PtrVertice> vn):id(count++){
         this->vn = vn;

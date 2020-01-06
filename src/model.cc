@@ -146,7 +146,7 @@ void Model::build_structure(){
     color_buffer = cv::Mat::zeros(HEIGHT + 1, WIDTH, CV_8UC3);
 
     for(auto & ptr_tr:polygons){
-        if(abs(ptr_tr->c) < 1e-2){
+        if(abs(ptr_tr->c) < 2e-3){
             continue;
         }
         int max_y, min_y, dy;
@@ -184,6 +184,9 @@ void Model::render_model(){
 
 void Model::interval_scanline(){
     cout << "Render with interval scanline method." << endl;
+    for(auto & vertice:vertices){
+        cout << vertice->point << endl;
+    }
     active_single_edges_table.clear();
     for(int i = HEIGHT; i > 0; i--){
         active_polygons_table.clear();
@@ -198,9 +201,9 @@ void Model::interval_scanline(){
         cout << i << endl;
         for(auto it_current = active_single_edges_table.begin(), it_next = next(it_current); it_next != active_single_edges_table.end();it_current = it_next, it_next = next(it_next) ){
             insert_active_polygons_table(active_polygons_table, *it_current);
-            cout << (*it_current)->polygon << "TABLE ";
+            cout << (*it_current) <<  " " << (*it_current)->polygon->id << "TABLE ";
             for(auto &polygon: active_polygons_table){
-                cout << polygon << " ";
+                cout << polygon->id << " ";
             }
             cout << endl;
 
@@ -210,6 +213,13 @@ void Model::interval_scanline(){
             double x_l, x_r, z_l, z_r;
             int id1, id2;
             std::tie(x_l, x_r) = std::make_tuple((*it_current)->x, (*(it_next))->x);
+            if(1 == 1){
+                cout << "SPECIAL DEBUG: " << x_l << " " << x_r << endl;
+
+                for(auto it = active_polygons_table.begin(); it != active_polygons_table.end(); it++){
+                    cout << (*it)->id << ": " << (*it)->caculate_depth(x_l, i) << " " <<  (*it)->caculate_depth(x_r, i) << endl; 
+                }
+            }
             auto min_zl_element = min_element(active_polygons_table.begin(), active_polygons_table.end(), [x_l, i](const PtrPolygon & A, const PtrPolygon & B){return A->caculate_depth(x_l, i) < B->caculate_depth(x_l, i); });
             auto min_zr_element = min_element(active_polygons_table.begin(), active_polygons_table.end(), [x_r, i](const PtrPolygon & A, const PtrPolygon & B){return A->caculate_depth(x_r, i) < B->caculate_depth(x_r, i); });
             std::tie(id1, id2) = std::make_tuple((*min_zl_element)->id, (*min_zr_element)->id);
@@ -219,8 +229,11 @@ void Model::interval_scanline(){
             }else{
                 //find the intersection point;
                 auto x_m = polygons[id1]->caculate_intersection(polygons[id2], x_l, x_r, i);
+                if(1 == 1){
+                    cout << "INTERSECTION " << i << " " << x_l << " " << x_m << " " << x_r << endl;
+                }
                 cv::line(color_buffer, {(int)std::round(x_l), i}, {(int)std::round(x_m), i}, polygons[id1]->color);
-                cv::line(color_buffer, {(int)std::round(x_m), i}, {(int)std::round(x_r), i}, polygons[id1]->color);
+                cv::line(color_buffer, {(int)std::round(x_m), i}, {(int)std::round(x_r), i}, polygons[id2]->color);
             }
 
         }

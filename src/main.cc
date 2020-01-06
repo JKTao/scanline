@@ -13,7 +13,7 @@ using namespace std;
 int main(){
     cout << "Please modify config file to choose model file and render method." << endl;
     cout << "Its default path is ../config/config.yaml." << endl;
-    string config_path = "../config/config.yaml";
+    string config_path = "/home/taokun/Work/Homework/scanline/config/config.yaml";
     set<int> valid_key = {'A', 'D', 'W', 'S', 'J', 'K', 'Q'};
     map<int, Eigen::Vector3d> map_key_rotation = {
         {'A', {0.05, 0, 0}},
