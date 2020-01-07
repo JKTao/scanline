@@ -24,7 +24,7 @@ struct Model{
     std::vector<std::vector<PtrPolygon>> polygons_table;
     std::vector<std::vector<PtrEdge>> edges_table;
     std::list<PtrActiveEdge> active_edges_table;
-    std::list<PtrActiveSingleEdge> active_single_edges_table;
+    std::vector<PtrActiveSingleEdge> active_single_edges_table;
     std::list<PtrPolygon> active_polygons_table;
     cv::Mat color_buffer;
     Eigen::MatrixXd z_buffer;
@@ -43,7 +43,7 @@ struct Model{
     void z_buffer_scanline();
     void interval_scanline();
     void render_model();
-    void insert_sorted_vector_into_active_edge_list(std::list<PtrActiveSingleEdge> & active_single_edges_table, std::vector<PtrEdge> & edges_list);
+    void insert_sorted_vector_into_active_edge_list(std::vector<PtrActiveSingleEdge> & active_single_edges_table, std::vector<PtrEdge> & edges_list);
     void insert_active_polygons_table(std::list<PtrPolygon> & active_polygons_table, PtrActiveSingleEdge edge);
     void build_structure();
     void show();
