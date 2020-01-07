@@ -189,12 +189,9 @@ void Model::interval_scanline(){
     // }
     active_single_edges_table.clear();
     for(int i = HEIGHT; i > 0; i--){
-        // double sum = 0; // for debug
         active_polygons_table.clear();
         auto & edges_list = edges_table[i];
 
-        //sort(edges_list.begin(), edges_list.end(), [](const PtrEdge & edge1, const PtrEdge & edge2){return edge1->x < edge2->x;});
-        //int j;
         //insert the sorted vector into list
         insert_sorted_vector_into_active_edge_list(active_single_edges_table, edges_list);
         sort(active_single_edges_table.begin(), active_single_edges_table.end(), [](const ActiveSingleEdge& edge1, const ActiveSingleEdge& edge2) {return edge1.x < edge2.x;});
@@ -278,23 +275,35 @@ void Model::insert_sorted_vector_into_active_edge_list(vector<ActiveSingleEdge> 
     int m = active_single_edges_table.size(), n = edges_list.size();
     active_single_edges_table.reserve(m + n);
     for(int j = 0; j < edges_list.size(); j++){
-        active_single_edges_table.emplace_back(ActiveSingleEdge(edges_list[j], polygons[edges_list[j]->id]));
+        active_single_edges_table.emplace_back(ActiveSingleEdge(edges_list[j], edges_list[j]->polygon));
     }
 }
 
 void Model::z_buffer_scanline(){
     cout << "Render with z buffer scanline method." << endl;
-    active_edges_table.clear();
     active_polygons_table.clear();
     //Construct Active Polygon Table, and plot Active Edge Table
+    vector<PtrEdge> edges_list;
     for(int i = HEIGHT; i > 0; i--){
-        auto & edges_list = edges_table[i];
-        vector<PtrEdge> left_edges_list;
-
+        active_edges_table.clear();
+        auto & current_edges_list = edges_table[i];
+        edges_list.insert(edges_list.end(), current_edges_list.begin(), current_edges_list.end());
         //insert polygon from polygons_list into active polygon tables.
         //insert edge from polygon into active edge tables.
-        sort(edges_list.begin(), edges_list.end(), [](const PtrEdge & edge1, const PtrEdge & edge2){return edge1->id < edge2->id; });
+        sort(edges_list.begin(), edges_list.end(), [](const PtrEdge & edge1, const PtrEdge & edge2){return (edge1->id < edge2->id) || ((edge1->id == edge2->id) && (edge1->x < edge2->x)); });
         int j;
+        //for debug
+        if(edges_list.empty()){
+            continue;
+        }
+
+        // cout << "LINE: " << i << " ";
+        // cout << "EDGES_LIST: " << edges_list.size() << "            ";
+        // for(int k = 0; k < edges_list.size(); k++){
+        //     cout << edges_list[k]->id << ":" << edges_list[k]->x << "," << edges_list[k]->z << " ";
+        // }
+        // cout << endl;
+
         for(j = 0; j < edges_list.size() - 1; j++){
             if(edges_list.size() <= 1){
                 break;
@@ -304,11 +313,9 @@ void Model::z_buffer_scanline(){
                 active_edges_table.push_back(active_edge);
                 j++;
             }else{
-                left_edges_list.push_back(edges_list[j]);
+                cout << "What happend?" << endl;
+                // left_edges_list.push_back(edges_list[j]);
             }
-        }
-        if(j < edges_list.size()){
-            left_edges_list.push_back(edges_list[j]);
         }
 
         //plot here
@@ -319,43 +326,37 @@ void Model::z_buffer_scanline(){
             // if(x_l > x_r){
             //     cout << "BAD POINT" << x_l << " " << x_r << " " << active_edge->dx_l << " " <<  active_edge->dx_r << " " << active_edge->polygon->id << " " << i <<  endl;
             // }
+            // cout << "PLOT: " << active_edge->polygon->id << " " << active_edge->x_l << " " << active_edge->x_r << endl;
             for(int x = active_edge->x_l; x <= active_edge->x_r; x++){
                 if(z <= z_buffer(i, x)){
                     z_buffer(i, x) = z;
                     color_buffer.at<cv::Vec3b>(i, x) = color;
                 }
+                // else{
+                //     cout << "Z_BUFFER" << x << " " << i << " " << z << " " << z_buffer(i, x) << endl;
+                // }
                 z += active_edge->dz_x;
             }
         }
+        // cout << endl;
 
-        for(auto it = active_edges_table.begin(); it != active_edges_table.end();){
-            auto &active_edge = *it;
-            auto &polygon = active_edge->polygon;
 
-            //firstly decrease dy of active polygon and active edge.
-            polygon->dy--;
-            active_edge->dy_l--;
-            active_edge->dy_r--;
-            active_edge->z_l += active_edge->dz_y + active_edge->dx_l * active_edge->dz_x;
-            active_edge->x_l += active_edge->dx_l;
-            active_edge->x_r += active_edge->dx_r;
-            //see if active edge failed.
-            if((polygon->dy < 0) || (active_edge->dy_r < 0 && active_edge->dy_l < 0)){
-                //remove this active edge and polygon
-                it = active_edges_table.erase(it);
-                continue;
+
+        int edge_list_place = edges_list.size();
+        for (int j = 0; j < edge_list_place; j++) {
+            auto edge = edges_list[j];
+            edge->dy--;
+            edge->x += edge->dx;
+            edge->z += edge->dz_y + edge->dx * edge->dz_x;
+            if(edge->z > 1e3){
+                cout << "EDGE:" << edge->polygon->id << " " << edge->z << " " << edge->dz_x << " " << edge->dz_y << endl;
             }
-            if(active_edge->dy_r < 0){
-                auto edge_element = find_if(left_edges_list.begin(), left_edges_list.end(), [active_edge](const PtrEdge & A){return A->id == active_edge->polygon->id;});
-                PtrEdge edge = *edge_element;
-                tie(active_edge->x_r, active_edge->dx_r, active_edge->dy_r) = make_tuple(edge->x + edge->dx, edge->dx, edge->dy - 1);
-            }else if(active_edge->dy_l < 0){
-                auto edge_element = find_if(left_edges_list.begin(), left_edges_list.end(), [active_edge](const PtrEdge & A){return A->id == active_edge->polygon->id;});
-                PtrEdge edge = *edge_element;
-                tie(active_edge->x_l, active_edge->dx_l, active_edge->dy_l) = make_tuple(edge->x + edge->dx, edge->dx, edge->dy - 1);
+            if (edge->dy < 0) {
+                std::swap(edges_list[j], edges_list[--edge_list_place]);
+                j--;
             }
-            it++;
         }
+        edges_list.resize(edge_list_place);
     }
 
 }
