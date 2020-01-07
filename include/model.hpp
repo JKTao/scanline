@@ -47,4 +47,6 @@ struct Model{
     void insert_active_polygons_table(std::list<PtrPolygon> & active_polygons_table, PtrActiveSingleEdge edge);
     void build_structure();
     void show();
+
+    void draw_line(double x_l_, double x_r_, int y, cv::Vec3b& color);
 };

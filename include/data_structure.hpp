@@ -15,7 +15,7 @@ struct Vertice{
 
 struct Edge{
     using PtrVertice = Vertice*;
-    static cv::Scalar color;
+    static cv::Vec3b color;
     int x;
     int y;
     double dx;
