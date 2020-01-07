@@ -313,7 +313,7 @@ void Model::z_buffer_scanline(){
                 active_edges_table.push_back(active_edge);
                 j++;
             }else{
-                cout << "What happend?" << endl;
+                // cout << "What happend?" << endl;
                 // left_edges_list.push_back(edges_list[j]);
             }
         }
@@ -322,11 +322,6 @@ void Model::z_buffer_scanline(){
         for(auto & active_edge:active_edges_table){
             double z = active_edge->z_l;
             cv::Vec3b color = active_edge->polygon->color;
-            // int x_l = std::round(active_edge->x_l), x_r = std::round(active_edge->x_r);
-            // if(x_l > x_r){
-            //     cout << "BAD POINT" << x_l << " " << x_r << " " << active_edge->dx_l << " " <<  active_edge->dx_r << " " << active_edge->polygon->id << " " << i <<  endl;
-            // }
-            // cout << "PLOT: " << active_edge->polygon->id << " " << active_edge->x_l << " " << active_edge->x_r << endl;
             for(int x = active_edge->x_l; x <= active_edge->x_r; x++){
                 if(z <= z_buffer(i, x)){
                     z_buffer(i, x) = z;

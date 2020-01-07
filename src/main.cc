@@ -16,12 +16,12 @@ int main(){
     string config_path = "/home/taokun/Work/Homework/scanline/config/config.yaml";
     set<int> valid_key = {'A', 'D', 'W', 'S', 'J', 'K', 'Q'};
     map<int, Eigen::Vector3d> map_key_rotation = {
-        {'A', {0.05, 0, 0}},
-        {'D', {-0.05, 0, 0}},
-        {'W', {0, 0, -0.05}},
-        {'S', {0, 0, -0.05}},
+        {'H', {0.05, 0, 0}},
+        {'L', {-0.05, 0, 0}},
         {'J', {0, 0.05, 0}},
         {'K', {0, -0.05, 0}},
+        {'I', {0, 0, -0.05}},
+        {'M', {0, 0, 0.05}}
     };
     TicToc t_parse;
     Model model(config_path);
