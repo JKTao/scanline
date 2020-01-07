@@ -1,8 +1,7 @@
-.vscode/
-.vs/
-.idea/
-.gitignore
-cmake-build-debug/
-config/
-build/
+/.vscode
+/.vs
+/out
+/.idea
+/cmake-build-debug
+/build
 
