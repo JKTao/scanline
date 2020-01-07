@@ -185,19 +185,23 @@ void Model::render_model(){
 void Model::interval_scanline(){
     cout << "Render with interval scanline method." << endl;
     // for(auto & vertice:vertices){
-    //     // cout << vertice->point << endl;
+        // cout << vertice->point << endl;
     // }
     active_single_edges_table.clear();
     for(int i = HEIGHT; i > 0; i--){
         // double sum = 0; // for debug
         active_polygons_table.clear();
         auto & edges_list = edges_table[i];
+
+        //sort(edges_list.begin(), edges_list.end(), [](const PtrEdge & edge1, const PtrEdge & edge2){return edge1->x < edge2->x;});
+        //int j;
         //insert the sorted vector into list
         insert_sorted_vector_into_active_edge_list(active_single_edges_table, edges_list);
-        sort(active_single_edges_table.begin(), active_single_edges_table.end(), [](const PtrActiveSingleEdge & edge1, const PtrActiveSingleEdge & edge2){return edge1->x < edge2->x;});
+        sort(active_single_edges_table.begin(), active_single_edges_table.end(), [](const ActiveSingleEdge& edge1, const ActiveSingleEdge& edge2) {return edge1.x < edge2.x;});
         if(active_single_edges_table.empty()){
             continue;
         }
+        // cout << i << endl;
         for(auto it_current = active_single_edges_table.begin(), it_next = next(it_current); it_next != active_single_edges_table.end();it_current = it_next, it_next = next(it_next) ){
             insert_active_polygons_table(active_polygons_table, *it_current);
 
@@ -206,7 +210,7 @@ void Model::interval_scanline(){
             }
             double x_l, x_r, z_l, z_r;
             int id1, id2;
-            std::tie(x_l, x_r) = std::make_tuple((*it_current)->x, (*(it_next))->x);
+            std::tie(x_l, x_r) = std::make_tuple(it_current->x, it_next->x);
             // if(i >= 170 && i <= 180){
             // if(i >= 0){
             //     // cout << "SPECIAL DEBUG: " << i << " " << x_l << " " << x_r << endl;
@@ -222,25 +226,28 @@ void Model::interval_scanline(){
             if(id1 == id2){
                 // No through
                 draw_line(x_l, x_r, i, polygons[id1]->color);
+                    //cv::line(color_buffer, { (int)std::round(x_l), i }, { (int)std::round(x_r), i }, polygons[id1]->color, 1);
             }else{
                 //find the intersection point;
                 auto x_m = polygons[id1]->caculate_intersection(polygons[id2], x_l, x_r, i);
-                //use this for time measure.
-                // if(1 == 1){
-                    // cout << "INTERSECTION " << i << " " << x_l << " " << x_m << " " << x_r << endl;
-                // }
+                //TODO: use this for time measure.
+ //               if(1 == 1){
+ //                   cout << "INTERSECTION " << i << " " << x_l << " " << x_m << " " << x_r << endl;
+ //               }
                 draw_line(x_l, x_m, i, polygons[id1]->color);
                 draw_line(x_m, x_r, i, polygons[id2]->color);
+
             }
 
         }
+
         int edge_table_place = active_single_edges_table.size();
-        for(int  j = 0 ; j < edge_table_place; j++){
-            auto & edge = active_single_edges_table[j];
-            edge->dy--;
-            edge->x += edge->dx;
-            edge->z += edge->dz_y + edge->dx * edge->dz_x;
-            if(edge->dy < 0){
+        for (int j = 0; j < edge_table_place; j++) {
+            auto& edge = active_single_edges_table[j];
+            edge.dy--;
+            edge.x += edge.dx;
+            edge.z += edge.dz_y + edge.dx * edge.dz_x;
+            if (edge.dy < 0) {
                 std::swap(active_single_edges_table[j], active_single_edges_table[--edge_table_place]);
                 j--;
             }
@@ -249,8 +256,8 @@ void Model::interval_scanline(){
         // cout << "SEPCIAL DEBUG: " << i << " " << sum << endl;
     }
 }
-void Model::insert_active_polygons_table(list<PtrPolygon> & active_polygons_table, PtrActiveSingleEdge edge){
-    int id = edge->polygon->id;
+void Model::insert_active_polygons_table(list<PtrPolygon> & active_polygons_table, ActiveSingleEdge & edge){
+    int id = edge.polygon->id;
     auto it = find_if(active_polygons_table.begin(), active_polygons_table.end(), [id](const PtrPolygon & polygon){return polygon->id == id;});
     if(it == active_polygons_table.end()){
         active_polygons_table.push_back(polygons[id]);
@@ -267,11 +274,11 @@ void Model::draw_line(double x_l_, double x_r_, int y, cv::Vec3b& color) {
 
 }
 
-void Model::insert_sorted_vector_into_active_edge_list(vector<PtrActiveSingleEdge> & active_single_edges_table, vector<PtrEdge> & edges_list){
+void Model::insert_sorted_vector_into_active_edge_list(vector<ActiveSingleEdge> & active_single_edges_table, vector<PtrEdge> & edges_list){
     int m = active_single_edges_table.size(), n = edges_list.size();
-    active_single_edges_table.resize(m + n);
+    active_single_edges_table.reserve(m + n);
     for(int j = 0; j < edges_list.size(); j++){
-        active_single_edges_table[m + j] = new ActiveSingleEdge(edges_list[j], polygons[edges_list[j]->id]); 
+        active_single_edges_table.emplace_back(ActiveSingleEdge(edges_list[j], polygons[edges_list[j]->id]));
     }
 }
 

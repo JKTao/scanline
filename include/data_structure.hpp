@@ -147,6 +147,7 @@ struct ActiveSingleEdge{
     double dz_y;
     double z;
     PtrPolygon polygon;
+    ActiveSingleEdge(){}
     ActiveSingleEdge(PtrEdge e1, PtrPolygon & polygon){
         std::tie(dx, x, this->polygon, y) = std::make_tuple(e1->dx, e1->x, polygon, e1->y);
         dy = (e1->extrem_process)?(e1->dy - 1):e1->dy;
