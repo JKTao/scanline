@@ -260,8 +260,9 @@ void Model::insert_active_polygons_table(list<PtrPolygon> & active_polygons_tabl
 }
 void Model::draw_line(double x_l_, double x_r_, int y, cv::Vec3b& color) {
     int x_l = int(x_l_ + 0.5), x_r = int(x_r_ + 0.5);
-    if (x_r > x_l) {
-        cv::line(color_buffer, { x_l, y }, { x_r, y }, color, 1);
+    for(int x = x_l; x <= x_r; x++){
+        color_buffer.at<cv::Vec3b>(y, x) = color;
+        // cv::line(color_buffer, { x_l, y }, { x_r, y }, color, 1);
     }
 
 }
