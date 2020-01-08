@@ -97,6 +97,10 @@ void Model::parse_object_file(const char *object_file_path){
             vector<PtrVertice> vn;
             int v1, v2, v3;
             sscanf(buffer_a, "f %[^\n]\n", buffer_b);
+            int len_buffer_b = strlen(buffer_b);
+            if(buffer_b[len_buffer_b - 1] == '\r'){
+                buffer_b[len_buffer_b - 1] = '\0'; 
+            }
             int i = 0, j = 0;
             while(buffer_b[i] != '\0'){
                 while(buffer_b[i] == ' '){
@@ -145,10 +149,12 @@ void Model::build_structure(){
     z_buffer = Eigen::MatrixXd::Ones(HEIGHT + 1, WIDTH) * 1e5;
     color_buffer = cv::Mat::zeros(HEIGHT + 1, WIDTH, CV_8UC3);
 
-    for(auto & ptr_tr:polygons){
+    for(int i = 0; i < polygons.size(); i++){
+        auto ptr_tr = polygons[i];
         if(abs(ptr_tr->c) < 2e-3){
             continue;
         }
+
         int max_y, min_y, dy;
         tie(max_y, min_y, dy) = ptr_tr->caculate_polygon();
         polygons_table[max_y].push_back(ptr_tr);
@@ -159,6 +165,7 @@ void Model::build_structure(){
                 edges_table[edge->y].push_back(edge);
             }
         }
+
     }
 
     // check if model read successfully: Plot frame.
@@ -208,14 +215,17 @@ void Model::interval_scanline(){
             double x_l, x_r, z_l, z_r;
             int id1, id2;
             std::tie(x_l, x_r) = std::make_tuple(it_current->x, it_next->x);
-            // if(i >= 170 && i <= 180){
-            // if(i >= 0){
-            //     // cout << "SPECIAL DEBUG: " << i << " " << x_l << " " << x_r << endl;
-
+            // if(i == 165){
+            // // if(i >= 0){
+            //     cout << "SPECIAL DEBUG: " << i << " " << x_l << " " << x_r << endl;
+            //     cout << "POLYGONS: ";
             //     for(auto it = active_polygons_table.begin(); it != active_polygons_table.end(); it++){
             //         // cout << (*it)->id << ": " << (*it)->caculate_depth(x_l, i) << " " <<  (*it)->caculate_depth(x_r, i) << endl; 
-            //         sum += (*it)->caculate_depth(x_l, i) + (*it)->caculate_depth(x_r, i);
+            //         // sum += (*it)->caculate_depth(x_l, i) + (*it)->caculate_depth(x_r, i);
+            //         cout << (*it)->id << " ";
             //     }
+            //     cout << endl;
+            //     cout << "EDGE: " << it_current->x << " " << it_current->polygon->id << endl;
             // }
             auto min_zl_element = min_element(active_polygons_table.begin(), active_polygons_table.end(), [x_l, i](const PtrPolygon & A, const PtrPolygon & B){return A->caculate_depth(x_l, i) < B->caculate_depth(x_l, i); });
             auto min_zr_element = min_element(active_polygons_table.begin(), active_polygons_table.end(), [x_r, i](const PtrPolygon & A, const PtrPolygon & B){return A->caculate_depth(x_r, i) < B->caculate_depth(x_r, i); });
@@ -343,9 +353,9 @@ void Model::z_buffer_scanline(){
             edge->dy--;
             edge->x += edge->dx;
             edge->z += edge->dz_y + edge->dx * edge->dz_x;
-            if(edge->z > 1e3){
-                cout << "EDGE:" << edge->polygon->id << " " << edge->z << " " << edge->dz_x << " " << edge->dz_y << endl;
-            }
+            // if(edge->z > 1e3){
+            //     cout << "EDGE:" << edge->polygon->id << " " << edge->z << " " << edge->dz_x << " " << edge->dz_y << endl;
+            // }
             if (edge->dy < 0) {
                 std::swap(edges_list[j], edges_list[--edge_list_place]);
                 j--;
