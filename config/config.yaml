@@ -1,7 +1,7 @@
 object_path: "../model/bunny.obj"
 width: 800
 height: 600
-render_mode: 0
+render_mode: 1
 rotation_vector: [3.14, 0, 0] #original state should stay [3.14, 0, 0]
 # rotation_vector: [3.1390192962923296,-0.07849190419314925,-6.250521970461508e-05] #for test
 # rotation_vector: [3.0890499031637146,-0.07724541661395386,0.0018699879919930338]

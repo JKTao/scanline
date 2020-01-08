@@ -27,6 +27,7 @@ int main(){
     Model model(config_path);
     cout << "Parse object file takes " << t_parse.toc() << "ms" << endl;
     cout << "There are " << model.polygons.size() << " faces"<< endl;
+    cout << "There are " << model.vertices.size() << " vertices" << endl;
 
     //rotate and scale all the vertices 
     TicToc t_transform;
